@@ -98,7 +98,7 @@ export function PlansPage() {
       }}
       renderFields={() => (
         <>
-          <Form.Item name="name" label="Nom" rules={[requiredLTRule]}>
+          <Form.Item name="name" label="Nom" required rules={[requiredLTRule]}>
             <LocalizedTextInput placeholder="Masalan: Oylik obuna" />
           </Form.Item>
           <Form.Item name="description" label="Tavsif">

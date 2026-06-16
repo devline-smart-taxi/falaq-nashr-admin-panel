@@ -3,21 +3,25 @@ import {
   Input,
   InputNumber,
   Select,
-  Button,
   Space,
   Card,
   Divider,
+  Switch,
   Typography,
+  Button,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import {
+  SoundOutlined,
+  ReadOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons'
 import { LocalizedTextInput } from '@/components/form/LocalizedTextInput'
 import { ImageUpload } from '@/components/form/ImageUpload'
+import { FileField } from '@/components/form/FileField'
+import { EditionAssetStatus } from './EditionAssetStatus'
 import { requiredLTRule } from '@/lib/lt'
-import {
-  ACCESS_TYPE_OPTIONS,
-  STATUS_OPTIONS,
-  FORMAT_OPTIONS,
-} from './constants'
+import { ACCESS_TYPE_OPTIONS, STATUS_OPTIONS, uploadLimits } from './constants'
 import type { EditionFormat } from '@/types/book'
 
 export interface SelectOption {
@@ -25,11 +29,44 @@ export interface SelectOption {
   label: string
 }
 
+const AUDIO_ACCEPT = uploadLimits('AUDIO', 'CONTENT').accept.join(',')
+
+/** AntD validator: massiv bo'sh bo'lmasligini tekshiradi (ko'p-tanlovли select). */
+const requireNonEmpty =
+  (message: string) =>
+  (_: unknown, value: unknown[] | undefined) =>
+    value && value.length ? Promise.resolve() : Promise.reject(new Error(message))
+
 interface Props {
   authorOptions: SelectOption[]
   categoryOptions: SelectOption[]
   collectionOptions: SelectOption[]
   optionsLoading?: boolean
+  /** Tahrirlашда mavjud edition id'lari (holat paneli ko'rsatish uchun). */
+  editionIds?: Partial<Record<EditionFormat, string>>
+}
+
+/** Format fayllari (to'liq + namuna) — Saqlашда avtomatik yuklanadi. */
+function ContentFileFields({
+  group,
+  format,
+}: {
+  group: 'audio' | 'ebook'
+  format: EditionFormat
+}) {
+  const { accept, maxBytes } = uploadLimits(format, 'CONTENT')
+  const acceptStr = accept.join(',')
+  const maxMb = Math.round(maxBytes / 1024 / 1024)
+  return (
+    <Space align="start" wrap>
+      <Form.Item name={[group, 'contentFile']} label={`To'liq fayl (maks ${maxMb} MB)`}>
+        <FileField accept={acceptStr} />
+      </Form.Item>
+      <Form.Item name={[group, 'previewFile']} label="Namuna (ixtiyoriy)">
+        <FileField accept={acceptStr} placeholder="Namuna fayli" />
+      </Form.Item>
+    </Space>
+  )
 }
 
 export function BookFormFields({
@@ -37,18 +74,43 @@ export function BookFormFields({
   categoryOptions,
   collectionOptions,
   optionsLoading,
+  editionIds,
 }: Props) {
   return (
     <>
-      <Form.Item name="title" label="Sarlavha" rules={[requiredLTRule]}>
+      <Form.Item name="title" label="Sarlavha" required rules={[requiredLTRule]}>
         <LocalizedTextInput placeholder="Masalan: Oʻtkan kunlar" />
       </Form.Item>
 
-      <Form.Item name="description" label="Tavsif">
+      <Form.Item
+        name="description"
+        label="Tavsif"
+        required
+        rules={[
+          {
+            validator: (_, v) =>
+              v?.uz?.trim()
+                ? Promise.resolve()
+                : Promise.reject(new Error('Tavsif majburiy')),
+          },
+        ]}
+      >
         <LocalizedTextInput multiline placeholder="Kitob haqida" />
       </Form.Item>
 
-      <Form.Item name="cover" label="Muqova">
+      <Form.Item
+        name="cover"
+        label="Muqova"
+        required
+        rules={[
+          {
+            validator: (_, v) =>
+              v instanceof File || typeof v === 'string'
+                ? Promise.resolve()
+                : Promise.reject(new Error('Muqova majburiy')),
+          },
+        ]}
+      >
         <ImageUpload />
       </Form.Item>
 
@@ -58,10 +120,7 @@ export function BookFormFields({
         </Form.Item>
 
         {/* Narx faqat PURCHASE'da */}
-        <Form.Item
-          noStyle
-          shouldUpdate={(p, c) => p.accessType !== c.accessType}
-        >
+        <Form.Item noStyle shouldUpdate={(p, c) => p.accessType !== c.accessType}>
           {({ getFieldValue }) =>
             getFieldValue('accessType') === 'PURCHASE' ? (
               <Form.Item
@@ -99,18 +158,29 @@ export function BookFormFields({
         <Input placeholder="978-9943-..." />
       </Form.Item>
 
-      <Form.Item name="authorId" label="Muallif">
+      <Form.Item
+        name="authorIds"
+        label="Mualliflar"
+        required
+        rules={[{ validator: requireNonEmpty('Kamida bitta muallif') }]}
+      >
         <Select
+          mode="multiple"
           allowClear
           showSearch
           optionFilterProp="label"
-          placeholder="Muallif tanlang"
+          placeholder="Muallif(lar) tanlang"
           options={authorOptions}
           loading={optionsLoading}
         />
       </Form.Item>
 
-      <Form.Item name="categoryIds" label="Kategoriyalar">
+      <Form.Item
+        name="categoryIds"
+        label="Kategoriyalar"
+        required
+        rules={[{ validator: requireNonEmpty('Kamida bitta kategoriya') }]}
+      >
         <Select
           mode="multiple"
           allowClear
@@ -122,7 +192,12 @@ export function BookFormFields({
         />
       </Form.Item>
 
-      <Form.Item name="collectionIds" label="Kolleksiyalar">
+      <Form.Item
+        name="collectionIds"
+        label="Kolleksiyalar"
+        required
+        rules={[{ validator: requireNonEmpty('Kamida bitta kolleksiya') }]}
+      >
         <Select
           mode="multiple"
           allowClear
@@ -134,107 +209,150 @@ export function BookFormFields({
         />
       </Form.Item>
 
-      <Divider titlePlacement="left">Formatlar (editions)</Divider>
+      <Divider titlePlacement="left">
+        Formatlar <span style={{ color: '#ff4d4f' }}>*</span>
+      </Divider>
       <Typography.Paragraph type="secondary" style={{ marginTop: -8 }}>
-        Kamida bitta format. Har format (Audio / E-kitob) bir martadan ortiq bo'lmasin.
+        Kitobда qaysi format(lar) borligini yoqing — kamida bittasi.
       </Typography.Paragraph>
-
-      <Form.List
-        name="editions"
-        rules={[
-          {
-            validator: async (_, editions) => {
-              const list = (editions ?? []) as { format?: EditionFormat }[]
-              if (list.length < 1) {
-                return Promise.reject(new Error('Kamida bitta format qo‘shing'))
-              }
-              const formats = list.map((e) => e?.format).filter(Boolean)
-              if (new Set(formats).size !== formats.length) {
-                return Promise.reject(new Error('Har format faqat bir marta bo‘lsin'))
-              }
-              return Promise.resolve()
-            },
-          },
-        ]}
+      <Form.Item
+        noStyle
+        shouldUpdate={(p, c) => p.hasAudio !== c.hasAudio || p.hasEbook !== c.hasEbook}
       >
-        {(fields, { add, remove }, { errors }) => (
-          <Space direction="vertical" style={{ width: '100%' }}>
-            {fields.map((field) => (
-              <Card
-                key={field.key}
-                size="small"
-                extra={
-                  <Button
-                    type="text"
-                    danger
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    onClick={() => remove(field.name)}
-                  />
-                }
-              >
-                <Space align="start" wrap>
+        {({ getFieldValue }) =>
+          !getFieldValue('hasAudio') && !getFieldValue('hasEbook') ? (
+            <Typography.Paragraph type="danger" style={{ marginTop: -8 }}>
+              Kamida bitta format (audio yoki e-kitob) yoqilishi shart.
+            </Typography.Paragraph>
+          ) : null
+        }
+      </Form.Item>
+
+      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        {/* AUDIO */}
+        <Card
+          size="small"
+          title={
+            <Space>
+              <SoundOutlined /> Audio
+            </Space>
+          }
+          extra={
+            <Form.Item name="hasAudio" valuePropName="checked" noStyle>
+              <Switch checkedChildren="Bor" unCheckedChildren="Yo'q" />
+            </Form.Item>
+          }
+        >
+          <Form.Item noStyle shouldUpdate={(p, c) => p.hasAudio !== c.hasAudio}>
+            {({ getFieldValue }) =>
+              getFieldValue('hasAudio') ? (
+                <Space direction="vertical" style={{ width: '100%' }}>
                   <Form.Item
-                    name={[field.name, 'format']}
-                    label="Format"
-                    rules={[{ required: true, message: 'Format' }]}
+                    name={['audio', 'narrator']}
+                    label="Diktor"
+                    tooltip="Davomiyligi audio fayldan avtomat aniqlanadi — qo'lda kiritish shart emas."
                   >
-                    <Select options={FORMAT_OPTIONS} style={{ width: 140 }} />
+                    <Input placeholder="Diktor ismi" style={{ width: 180 }} />
                   </Form.Item>
 
-                  <Form.Item
-                    noStyle
-                    shouldUpdate={(p, c) =>
-                      p.editions?.[field.name]?.format !==
-                      c.editions?.[field.name]?.format
-                    }
-                  >
-                    {({ getFieldValue }) => {
-                      const fmt = getFieldValue(['editions', field.name, 'format'])
-                      if (fmt === 'AUDIO') {
-                        return (
-                          <Space align="start" wrap>
-                            <Form.Item name={[field.name, 'narrator']} label="Diktor">
-                              <Input placeholder="Diktor ismi" style={{ width: 180 }} />
-                            </Form.Item>
-                            <Form.Item
-                              name={[field.name, 'durationSeconds']}
-                              label="Davomiyligi (soniya)"
-                            >
-                              <InputNumber min={0} style={{ width: 160 }} />
-                            </Form.Item>
-                          </Space>
-                        )
-                      }
-                      if (fmt === 'EBOOK') {
-                        return (
-                          <Form.Item
-                            name={[field.name, 'pageCount']}
-                            label="Sahifalar soni"
-                          >
-                            <InputNumber min={0} style={{ width: 160 }} />
-                          </Form.Item>
-                        )
-                      }
-                      return null
-                    }}
+                  <Typography.Text strong>Audio fayl(lar)</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Bitta fayl bo'lsa — bitta bob (tartib 0, nom shart emas). Ko'p bobli
+                    bo'lsa, har bobni tartib bilan qo'shing.
+                  </Typography.Text>
+
+                  <Form.List name={['audio', 'chapters']}>
+                    {(chapters, { add, remove }) => (
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        {chapters.map((ch) => (
+                          <Card key={ch.key} size="small" type="inner">
+                            <Space align="start" wrap>
+                              <Form.Item
+                                name={[ch.name, 'order']}
+                                label="Tartib"
+                                initialValue={ch.name}
+                              >
+                                <InputNumber min={0} style={{ width: 80 }} />
+                              </Form.Item>
+                              <Form.Item name={[ch.name, 'title']} label="Bob nomi (ixtiyoriy)">
+                                <Input placeholder="masalan: 1-bob" style={{ width: 180 }} />
+                              </Form.Item>
+                              <Form.Item name={[ch.name, 'file']} label="Fayl">
+                                <FileField accept={AUDIO_ACCEPT} />
+                              </Form.Item>
+                              <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => remove(ch.name)}
+                                style={{ marginTop: 30 }}
+                              />
+                            </Space>
+                          </Card>
+                        ))}
+                        <Button
+                          type="dashed"
+                          icon={<PlusOutlined />}
+                          onClick={() => add({ order: chapters.length })}
+                        >
+                          Bob / fayl qo'shish
+                        </Button>
+                      </Space>
+                    )}
+                  </Form.List>
+
+                  <Form.Item name={['audio', 'previewFile']} label="Namuna (ixtiyoriy)">
+                    <FileField accept={AUDIO_ACCEPT} placeholder="Namuna fayli" />
                   </Form.Item>
+
+                  {editionIds?.AUDIO && <EditionAssetStatus editionId={editionIds.AUDIO} />}
                 </Space>
-              </Card>
-            ))}
+              ) : (
+                <Typography.Text type="secondary">
+                  O'chiq — yoqish uchun yuqoridagi kalitni bosing.
+                </Typography.Text>
+              )
+            }
+          </Form.Item>
+        </Card>
 
-            <Button
-              type="dashed"
-              block
-              icon={<PlusOutlined />}
-              onClick={() => add({ format: undefined, isActive: true })}
-            >
-              Format qo'shish
-            </Button>
-            <Form.ErrorList errors={errors} />
-          </Space>
-        )}
-      </Form.List>
+        {/* E-KITOB */}
+        <Card
+          size="small"
+          title={
+            <Space>
+              <ReadOutlined /> E-kitob
+            </Space>
+          }
+          extra={
+            <Form.Item name="hasEbook" valuePropName="checked" noStyle>
+              <Switch checkedChildren="Bor" unCheckedChildren="Yo'q" />
+            </Form.Item>
+          }
+        >
+          <Form.Item noStyle shouldUpdate={(p, c) => p.hasEbook !== c.hasEbook}>
+            {({ getFieldValue }) =>
+              getFieldValue('hasEbook') ? (
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Form.Item
+                    name={['ebook', 'pageCount']}
+                    label="Sahifalar soni"
+                    tooltip="Taxminiy (EPUB reflowable — qat'iy bet yo'q)"
+                  >
+                    <InputNumber min={0} style={{ width: 160 }} />
+                  </Form.Item>
+                  <ContentFileFields group="ebook" format="EBOOK" />
+                  {editionIds?.EBOOK && <EditionAssetStatus editionId={editionIds.EBOOK} />}
+                </Space>
+              ) : (
+                <Typography.Text type="secondary">
+                  O'chiq — yoqish uchun yuqoridagi kalitni bosing.
+                </Typography.Text>
+              )
+            }
+          </Form.Item>
+        </Card>
+      </Space>
     </>
   )
 }

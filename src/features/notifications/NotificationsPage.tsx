@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Card, Form, Input, Select, Button, App, Typography, Alert, Space } from 'antd'
+import { Card, Form, Select, Button, App, Typography, Alert, Space } from 'antd'
 import { SendOutlined } from '@ant-design/icons'
 import { getApiError } from '@/api/client'
 import { localize } from '@/lib/localize'
+import { requireLT, requiredLTRule } from '@/lib/lt'
+import { LocalizedTextInput } from '@/components/form/LocalizedTextInput'
 import { useAuthStore } from '@/stores/auth'
 import { booksApi } from '@/features/books/api'
 import { sendBroadcast, type BroadcastInput, type NotificationType } from './api'
@@ -33,7 +35,12 @@ export function NotificationsPage() {
   async function onFinish(values: BroadcastInput) {
     setSending(true)
     try {
-      await sendBroadcast({ ...values, refId: values.refId || undefined })
+      await sendBroadcast({
+        type: values.type,
+        title: requireLT(values.title),
+        body: requireLT(values.body),
+        refId: values.refId || undefined,
+      })
       message.success('Bildirishnoma navbatga qo‘shildi')
       form.resetFields()
     } catch (e) {
@@ -62,25 +69,24 @@ export function NotificationsPage() {
           <Select options={TYPE_OPTIONS} />
         </Form.Item>
 
-        <Form.Item
-          name="title"
-          label="Sarlavha"
-          rules={[{ required: true, message: 'Sarlavha majburiy' }]}
-        >
-          <Input placeholder="Bildirishnoma sarlavhasi" maxLength={120} showCount />
+        <Form.Item name="title" label="Sarlavha" required rules={[requiredLTRule]}>
+          <LocalizedTextInput placeholder="Bildirishnoma sarlavhasi" />
         </Form.Item>
 
         <Form.Item
           name="body"
           label="Matn"
-          rules={[{ required: true, message: 'Matn majburiy' }]}
+          required
+          rules={[
+            {
+              validator: (_, v) =>
+                v?.uz?.trim()
+                  ? Promise.resolve()
+                  : Promise.reject(new Error('Matn majburiy')),
+            },
+          ]}
         >
-          <Input.TextArea
-            placeholder="Bildirishnoma matni"
-            autoSize={{ minRows: 3, maxRows: 6 }}
-            maxLength={500}
-            showCount
-          />
+          <LocalizedTextInput multiline placeholder="Bildirishnoma matni" />
         </Form.Item>
 
         <Form.Item

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Input, Button, Space, Tooltip, Typography } from 'antd'
+import { Input, Button, Space, Tooltip, Typography, Form } from 'antd'
 import { SyncOutlined, GlobalOutlined } from '@ant-design/icons'
 import type { LocalizedText } from '@/types/api'
 import { toCyrillic } from '@/lib/translit'
@@ -28,6 +28,7 @@ export function LocalizedTextInput({
   const v: LocalizedText = value ?? { uz: '' }
   const [cyrTouched, setCyrTouched] = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const { status } = Form.Item.useStatus() // uz maydonини xatoда qizartirish uchun
 
   const Field = multiline ? Input.TextArea : Input
 
@@ -52,6 +53,7 @@ export function LocalizedTextInput({
       <Field
         value={v.uz}
         onChange={onUz}
+        status={status === 'error' ? 'error' : undefined}
         placeholder={placeholder ?? "O'zbekcha (lotin)"}
         autoSize={multiline ? { minRows: 2, maxRows: 6 } : undefined}
       />

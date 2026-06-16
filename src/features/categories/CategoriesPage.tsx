@@ -80,7 +80,7 @@ export function CategoriesPage() {
       }}
       renderFields={() => (
         <>
-          <Form.Item name="name" label="Nom" rules={[requiredLTRule]}>
+          <Form.Item name="name" label="Nom" required rules={[requiredLTRule]}>
             <LocalizedTextInput placeholder="Masalan: Badiiy" />
           </Form.Item>
           <Form.Item name="image" label="Ikonka">

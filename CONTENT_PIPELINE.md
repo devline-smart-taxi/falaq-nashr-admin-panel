@@ -31,17 +31,17 @@ KEK       ── config (CONTENT_MASTER_KEK), bazaga hech qachon tushmaydi
 
 `EncryptedAsset` (jadval `encrypted_assets`) — har shifrlangan blob bitta yozuv:
 
-| Maydon | Izoh |
-|--------|------|
-| `editionId`, `kind` | qaysi format (`BookEdition`) va tur (`CONTENT` / `PREVIEW`) |
-| `status` | `AWAITING_UPLOAD → PROCESSING → READY` (yoki `FAILED`) |
-| `r2Key` | shifrlangan obyekt kaliti R2'da (ommaviy URL emas — maxfiy) |
-| `iv` | kontent CTR IV (hex) |
-| `wrappedDek`, `wrapIv`, `wrapAuthTag`, `kekId` | o'ralgan DEK |
-| `rawKey` | vaqtinchalik xom yuklash kaliti — shifrlangach o'chiriladi |
-| `mime`, `sizeBytes` | metadata |
-| `previewLocked` | preview pullik qilinganmi (free → paid "flip") |
-| `processingError` | xato sababi (FAILED bo'lganda) |
+| Maydon                                         | Izoh                                                        |
+| ---------------------------------------------- | ----------------------------------------------------------- |
+| `editionId`, `kind`                            | qaysi format (`BookEdition`) va tur (`CONTENT` / `PREVIEW`) |
+| `status`                                       | `AWAITING_UPLOAD → PROCESSING → READY` (yoki `FAILED`)      |
+| `r2Key`                                        | shifrlangan obyekt kaliti R2'da (ommaviy URL emas — maxfiy) |
+| `iv`                                           | kontent CTR IV (hex)                                        |
+| `wrappedDek`, `wrapIv`, `wrapAuthTag`, `kekId` | o'ralgan DEK                                                |
+| `rawKey`                                       | vaqtinchalik xom yuklash kaliti — shifrlangach o'chiriladi  |
+| `mime`, `sizeBytes`                            | metadata                                                    |
+| `previewLocked`                                | preview pullik qilinganmi (free → paid "flip")              |
+| `processingError`                              | xato sababi (FAILED bo'lganda)                              |
 
 `kind` bo'yicha audio boblari / ko'p treklar kelajakda `order` bilan kengayadi.
 
@@ -66,11 +66,18 @@ Katta fayllar **server orqali o'tmaydi** — brauzer to'g'ridan-to'g'ri R2'ga yu
 5. GET /editions/:editionId/assets          (holatni kuzatish: poll)
 ```
 
-Har format (audio / e-kitob) uchun bitta `CONTENT` va ixtiyoriy bitta `PREVIEW`
-asset yuklanadi. Barcha kerakli asset `READY` bo'lgach, admin kitobni
-`PUBLISHED` qiladi (mavjud `PATCH /books/:id`).
+E-kitob uchun bitta `CONTENT`, audio uchun **bir yoki bir nechta `CONTENT` bob**
+(`order` 0,1,2... + `title`), va ixtiyoriy bitta `PREVIEW` asset yuklanadi.
+Barcha kerakli asset `READY` bo'lgach, admin kitobni `PUBLISHED` qiladi.
+
+**Audio bob bo'lib yuklash:** har bob alohida yuklanadi —
+`upload-url { kind:"CONTENT", order, title, ... }` → PUT → `process?kind=CONTENT&order=N`.
+`(editionId, kind, order)` unikal. Delivery (`POST /books/:id/content`) **doim
+`chapters[]`** qaytaradi (e-kitob/bir fayl = 1 element). Edition `durationSeconds`
+= boblar yig'indisi (avtomat).
 
 ### Cheklovlar
+
 - Audio: ≤ 500 MB — `audio/mpeg, audio/mp4, audio/aac, audio/ogg, audio/wav`
 - E-kitob: ≤ 100 MB — `application/epub+zip` (**standart**), `application/pdf`
 - Preview: ≤ 50 MB (formatga mos MIME)
@@ -81,6 +88,18 @@ asset yuklanadi. Barcha kerakli asset `READY` bo'lgach, admin kitobni
 > maxsus nashrlar uchun qoldiriladi (PDF rejimida reader sozlamalari ishlamaydi,
 > faqat zoom). Backend formatdan qat'i nazar baytlarni shifrlaydi —
 > konvertatsiya qilmaydi; EPUB yuklashdan oldin tayyorlanadi (pastga qarang).
+
+### Metadata avtomatikasi
+
+- **Audio davomiyligi (`durationSeconds`)** — CONTENT audio asset shifrlanganда
+  worker xom fayldan **avtomat** o'qiydi (`music-metadata`) va edition'ga yozadi.
+  Admin qo'lda kiritishi shart emas (kiritsa, avto-qiymat keyin ustidan yozadi).
+  Best-effort: o'qib bo'lmasa shifrlash baribir muvaffaqiyatli, `durationSeconds`
+  null qoladi.
+- **E-kitob `pageCount`** — EPUB reflowable, qat'iy bet yo'q; bu faqat taxminiy
+  (bosma jami beti). "Haqiqiy" bosma sahifa mobil reader'да EPUB **page-list**
+  bilan ko'rsatiladi (EPUB ichidagi `epub:type="pagebreak"` markerlar) — backend
+  qo'shmaydi, nashriyot EPUB'ida bo'lishi kerak.
 
 ## Bepul preview (ommaviy)
 
@@ -95,12 +114,14 @@ GET /books/:bookId/preview?format=AUDIO
 - Faqat `PUBLISHED` kitob va `READY` preview uchun ishlaydi.
 
 ### Free → paid "flip"
+
 `PATCH /editions/:editionId/preview-access  { locked: true }` — namunani pullik
 qiladi. Shundan keyin preview kaliti berilmaydi (HTTP 403), lekin **ciphertext
 qayta shifrlanmaydi** — at-rest fayl o'zgarmaydi, faqat kalit berish to'xtaydi.
 To'liq pullik delivery (litsenziya + qurilma) — 3-bosqich.
 
 ## 3-bosqichga tayyor (delivery / licensing)
+
 - `CryptoService.unwrapDek()` va `createContentDecipher()` allaqachon tayyor.
 - To'liq kontent delivery'da: purchase/subscription tekshiruvi → DEK'ni qurilma
   ochiq kaliti bilan qayta o'rash → `content` signed URL + `License(expiresAt 30d)`.
@@ -108,6 +129,7 @@ To'liq pullik delivery (litsenziya + qurilma) — 3-bosqich.
   audioni sura oladi.
 
 ## Sozlash (env)
+
 ```
 CONTENT_MASTER_KEK   # base64, aniq 32 bayt. Yaratish:
                      #   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
@@ -115,11 +137,13 @@ CONTENT_KEK_ID=v1    # KEK versiyasi (rotatsiya uchun)
 CONTENT_UPLOAD_URL_TTL=3600
 CONTENT_PREVIEW_URL_TTL=600
 ```
+
 KEK bo'sh bo'lsa shifrlash o'chiq (dev/CI) — yuklash/qayta ishlash 503 beradi.
 Productionда `CONTENT_MASTER_KEK` majburiy (aks holda ilova ishga tushmaydi).
 Qayta ishlash navbati uchun **Redis** (BullMQ) talab qilinadi.
 
 ## R2 bucketlar (production — MUHIM)
+
 Ikki **alohida** bucket ishlatiladi:
 | Env | Bucket | Public-read | Mazmun |
 |-----|--------|-------------|--------|
@@ -133,4 +157,7 @@ Ikki **alohida** bucket ishlatiladi:
   dev/test) — server ishga tushganda ogohlantirish beradi.
 - Ikkala bucket bitta R2 akkaunti/kredensiallari bilan ishlaydi (qo'shimcha
   kalit shart emas).
+
+```
+
 ```

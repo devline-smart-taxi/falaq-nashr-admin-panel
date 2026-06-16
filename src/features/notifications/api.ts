@@ -1,11 +1,12 @@
 import { http } from '@/api/client'
+import type { LocalizedText } from '@/types/api'
 
 export type NotificationType = 'NEW_BOOK' | 'PROMO' | 'REMINDER' | 'LICENSE_EXPIRY'
 
 export interface BroadcastInput {
   type: NotificationType
-  title: string
-  body: string
+  title: LocalizedText
+  body: LocalizedText
   refId?: string
 }
 

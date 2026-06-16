@@ -39,7 +39,7 @@ export interface Book {
   status: BookStatus
   avgRating: string
   reviewCount: number
-  author: Author | null
+  authors: Author[]
   categories: Category[]
   collections: Collection[]
   editions: BookEdition[]
@@ -57,9 +57,9 @@ export interface CreateBookInput {
   isbn?: string | null
   sortOrder?: number
   status?: BookStatus
-  authorId?: string | null
-  categoryIds?: string[]
-  collectionIds?: string[]
+  authorIds: string[]
+  categoryIds: string[]
+  collectionIds: string[]
   editions: BookEditionInput[]
 }
 export type UpdateBookInput = Partial<CreateBookInput>
@@ -79,6 +79,11 @@ export interface Asset {
   id: string
   kind: AssetKind
   status: AssetStatus
+  /** Bob tartibi (audio bo'lib yuklash). Bitta faylда 0. */
+  order: number
+  /** Bob nomi (ko'p bobli audio). */
+  title: LocalizedText | null
+  durationSeconds: number | null
   mime: string | null
   sizeBytes: number | null
   previewLocked: boolean
@@ -89,6 +94,10 @@ export interface RequestUploadInput {
   kind: AssetKind
   mime: string
   sizeBytes: number
+  /** Bob tartibi (audio CONTENT bo'lib yuklash). Default 0. */
+  order?: number
+  /** Bob nomi (ko'p bobli audio). */
+  title?: LocalizedText
 }
 
 export interface UploadUrl {

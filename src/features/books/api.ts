@@ -1,6 +1,6 @@
 import { http } from '@/api/client'
 import { createCrudApi } from '@/lib/crud'
-import type { Paginated } from '@/types/api'
+import type { LocalizedText, Paginated } from '@/types/api'
 import type {
   Asset,
   AssetKind,
@@ -45,8 +45,36 @@ export async function putToR2(uploadUrl: string, file: File): Promise<void> {
   if (!res.ok) throw new Error(`R2 yuklash xatosi (HTTP ${res.status})`)
 }
 
-export function processEdition(editionId: string, kind: AssetKind): Promise<unknown> {
-  return http.post(`/editions/${editionId}/process`, undefined, { params: { kind } })
+export function processEdition(
+  editionId: string,
+  kind: AssetKind,
+  order = 0,
+): Promise<unknown> {
+  return http.post(`/editions/${editionId}/process`, undefined, {
+    params: { kind, order },
+  })
+}
+
+/**
+ * To'liq kontent yuklash oqimi (3 bosqich) bitta chaqiruvда.
+ * Audio boblar uchun `order` (0,1,2...) va `title` beriladi; bitta fayl uchun order 0.
+ */
+export async function uploadEditionContent(
+  editionId: string,
+  file: File,
+  kind: AssetKind,
+  order = 0,
+  title?: LocalizedText,
+): Promise<void> {
+  const { uploadUrl } = await requestUploadUrl(editionId, {
+    kind,
+    mime: file.type,
+    sizeBytes: file.size,
+    order,
+    title,
+  })
+  await putToR2(uploadUrl, file)
+  await processEdition(editionId, kind, order)
 }
 
 export function setPreviewAccess(editionId: string, locked: boolean): Promise<unknown> {

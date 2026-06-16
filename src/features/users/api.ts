@@ -1,6 +1,11 @@
 import { http } from '@/api/client'
 import type { AppUser } from '@/types/user'
 
+/** Foydalanuvchiga to'lovsiz obuna biriktirish (admin grant). */
+export function grantSubscription(userId: string, planId: string): Promise<unknown> {
+  return http.post(`/admin/users/${userId}/subscription`, { planId })
+}
+
 function isItemsWrapper(d: unknown): d is { items: AppUser[] } {
   return !!d && typeof d === 'object' && Array.isArray((d as { items?: unknown }).items)
 }

@@ -81,7 +81,7 @@ export function AuthorsPage() {
       }}
       renderFields={() => (
         <>
-          <Form.Item name="name" label="Ism" rules={[requiredLTRule]}>
+          <Form.Item name="name" label="Ism" required rules={[requiredLTRule]}>
             <LocalizedTextInput placeholder="Masalan: Abdulla Qodiriy" />
           </Form.Item>
           <Form.Item name="bio" label="Bio">

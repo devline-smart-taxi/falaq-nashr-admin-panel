@@ -15,17 +15,18 @@ import {
   Alert,
   Image,
   Tag,
+  Spin,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  CloudUploadOutlined,
 } from '@ant-design/icons'
 import { getApiError } from '@/api/client'
 import { saveResource } from '@/lib/crud'
 import { requireLT, normalizeLT } from '@/lib/lt'
+import { toCyrillic } from '@/lib/translit'
 import { localize, formatUZS } from '@/lib/localize'
 import { formatDate } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
@@ -34,7 +35,6 @@ import type { LocalizedText } from '@/types/api'
 import type {
   AccessType,
   Book,
-  BookEditionInput,
   BookListParams,
   BookStatus,
   CreateBookInput,
@@ -43,9 +43,8 @@ import type {
 import { authorsApi } from '@/features/authors/api'
 import { categoriesApi } from '@/features/categories/api'
 import { collectionsApi } from '@/features/collections/api'
-import { booksApi, listAdminBooks } from './api'
+import { booksApi, listAdminBooks, uploadEditionContent } from './api'
 import { BookFormFields, type SelectOption } from './BookFormFields'
-import { BookContentDrawer } from './BookContentDrawer'
 import {
   ACCESS_TYPE_COLOR,
   ACCESS_TYPE_LABEL,
@@ -55,7 +54,25 @@ import {
   STATUS_COLOR,
   STATUS_LABEL,
   STATUS_OPTIONS,
+  uploadLimits,
 } from './constants'
+
+// Audio bobi — tartib + nom + fayl (Saqlашда yuklanadi). durationSeconds avtomat.
+interface AudioChapter {
+  order?: number
+  title?: string
+  file?: File | null
+}
+interface AudioGroup {
+  narrator?: string
+  chapters?: AudioChapter[]
+  previewFile?: File | null
+}
+interface EbookGroup {
+  pageCount?: number
+  contentFile?: File | null
+  previewFile?: File | null
+}
 
 interface BookFormValues {
   title: LocalizedText
@@ -66,10 +83,13 @@ interface BookFormValues {
   isbn?: string
   sortOrder: number
   status: BookStatus
-  authorId?: string
+  authorIds?: string[]
   categoryIds?: string[]
   collectionIds?: string[]
-  editions: BookEditionInput[]
+  hasAudio: boolean
+  audio?: AudioGroup
+  hasEbook: boolean
+  ebook?: EbookGroup
   cover?: ImageValue
 }
 
@@ -79,9 +99,13 @@ const EMPTY_FORM: BookFormValues = {
   accessType: 'PURCHASE',
   sortOrder: 0,
   status: 'DRAFT',
+  authorIds: [],
   categoryIds: [],
   collectionIds: [],
-  editions: [{ format: 'EBOOK', isActive: true }],
+  hasAudio: false,
+  audio: { chapters: [{ order: 0 }] },
+  hasEbook: false,
+  ebook: {},
 }
 
 type Filters = Pick<
@@ -109,10 +133,9 @@ export function BooksPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editing, setEditing] = useState<Book | null>(null)
   const [saving, setSaving] = useState(false)
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null)
   const [formError, setFormError] = useState<string[] | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [contentBook, setContentBook] = useState<Book | null>(null)
-  const [contentOpen, setContentOpen] = useState(false)
 
   const params: BookListParams = {
     page,
@@ -173,6 +196,8 @@ export function BooksPage() {
     setEditing(book)
     setFormError(null)
     form.resetFields()
+    const audioEd = book.editions.find((e) => e.format === 'AUDIO')
+    const ebookEd = book.editions.find((e) => e.format === 'EBOOK')
     form.setFieldsValue({
       title: book.title,
       description: book.description ?? { uz: '' },
@@ -182,24 +207,17 @@ export function BooksPage() {
       isbn: book.isbn ?? '',
       sortOrder: book.sortOrder,
       status: book.status,
-      authorId: book.author?.id,
+      authorIds: book.authors.map((a) => a.id),
       categoryIds: book.categories.map((c) => c.id),
       collectionIds: book.collections.map((c) => c.id),
-      editions: book.editions.map((e) => ({
-        format: e.format,
-        narrator: e.narrator ?? undefined,
-        durationSeconds: e.durationSeconds ?? undefined,
-        pageCount: e.pageCount ?? undefined,
-        isActive: e.isActive,
-      })),
+      hasAudio: !!audioEd,
+      // Mavjud boblar holat panelida ko'rinadi; bu yerда yangi/almashtiruv qo'shiladi.
+      audio: { narrator: audioEd?.narrator ?? undefined, chapters: [] },
+      hasEbook: !!ebookEd,
+      ebook: { pageCount: ebookEd?.pageCount ?? undefined },
       cover: book.coverUrl ?? undefined,
     })
     setDrawerOpen(true)
-  }
-
-  function openContent(book: Book) {
-    setContentBook(book)
-    setContentOpen(true)
   }
 
   async function handleDelete(id: string) {
@@ -219,36 +237,172 @@ export function BooksPage() {
     setSaving(true)
     setFormError(null)
     try {
+      // 1) Kamida bitta format.
+      if (!values.hasAudio && !values.hasEbook) {
+        throw new Error('Kamida bitta format (audio yoki e-kitob) yoqing')
+      }
+
+      // Yoqilgan format uchun kontent fayli majburiy (yaratишда yoki yangi yoqilган
+      // formatда). Tahrirlашда mavjud format uchun talab qilinmaydi — fayli bor.
+      const audioExisted = !!editing?.editions.some((e) => e.format === 'AUDIO')
+      const ebookExisted = !!editing?.editions.some((e) => e.format === 'EBOOK')
+      if (values.hasAudio && !audioExisted) {
+        const hasAudioFile = (values.audio?.chapters ?? []).some((c) => c.file)
+        if (!hasAudioFile) {
+          throw new Error('Audio format yoqilgan — kamida bitta audio fayl yuklang')
+        }
+      }
+      if (values.hasEbook && !ebookExisted) {
+        if (!values.ebook?.contentFile) {
+          throw new Error('E-kitob format yoqilgan — e-kitob faylini yuklang')
+        }
+      }
+
+      // Muqovasiz PUBLISHED bo'lmaydi (backend 400 cover_required_to_publish).
+      const hasCover = values.cover instanceof File || typeof values.cover === 'string'
+      if (values.status === 'PUBLISHED' && !hasCover) {
+        throw new Error("Chop etish (PUBLISHED) uchun avval muqova yuklang")
+      }
+
+      // Yuklanadigan fayllarni (format + tur) yig'amiz va oldindan tekshiramiz.
+      const fileChecks: { format: EditionFormat; kind: 'CONTENT' | 'PREVIEW'; file: File }[] = []
+      if (values.hasAudio) {
+        for (const ch of values.audio?.chapters ?? []) {
+          if (ch.file) fileChecks.push({ format: 'AUDIO', kind: 'CONTENT', file: ch.file })
+        }
+        if (values.audio?.previewFile)
+          fileChecks.push({ format: 'AUDIO', kind: 'PREVIEW', file: values.audio.previewFile })
+      }
+      if (values.hasEbook) {
+        if (values.ebook?.contentFile)
+          fileChecks.push({ format: 'EBOOK', kind: 'CONTENT', file: values.ebook.contentFile })
+        if (values.ebook?.previewFile)
+          fileChecks.push({ format: 'EBOOK', kind: 'PREVIEW', file: values.ebook.previewFile })
+      }
+      for (const fc of fileChecks) {
+        const { accept, maxBytes } = uploadLimits(fc.format, fc.kind)
+        if (!accept.includes(fc.file.type)) {
+          throw new Error(`${FORMAT_LABEL[fc.format]} (${fc.kind}): format mos emas`)
+        }
+        if (fc.file.size > maxBytes) {
+          const mb = Math.round(maxBytes / 1024 / 1024)
+          throw new Error(`${FORMAT_LABEL[fc.format]} (${fc.kind}): fayl ${mb} MB dan katta`)
+        }
+      }
+
+      // 2) Kitobni saqlaymiz (+muqova) — javobda editions[].id keladi.
       const isPurchase = values.accessType === 'PURCHASE'
-      const buildInput = (): CreateBookInput => ({
-        title: requireLT(values.title),
-        description: normalizeLT(values.description),
-        accessType: values.accessType,
-        price: isPurchase ? (values.price ?? null) : null,
-        publishedYear: values.publishedYear ?? null,
-        isbn: values.isbn?.trim() || null,
-        sortOrder: values.sortOrder ?? 0,
-        status: values.status,
-        authorId: values.authorId ?? null,
-        categoryIds: values.categoryIds ?? [],
-        collectionIds: values.collectionIds ?? [],
-        editions: (values.editions ?? []).map((e) => ({
-          format: e.format,
-          narrator: e.format === 'AUDIO' ? e.narrator?.trim() || null : null,
-          durationSeconds: e.format === 'AUDIO' ? (e.durationSeconds ?? null) : null,
-          pageCount: e.format === 'EBOOK' ? (e.pageCount ?? null) : null,
-          isActive: e.isActive ?? true,
-        })),
-        ...(values.cover === null ? { coverUrl: null } : {}),
+      const buildInput = (): CreateBookInput => {
+        const editions: CreateBookInput['editions'] = []
+        if (values.hasAudio) {
+          // durationSeconds yuborilmaydi — audio fayldan avtomat aniqlanadi.
+          editions.push({
+            format: 'AUDIO',
+            narrator: values.audio?.narrator?.trim() || null,
+            isActive: true,
+          })
+        }
+        if (values.hasEbook) {
+          editions.push({
+            format: 'EBOOK',
+            pageCount: values.ebook?.pageCount ?? null,
+            isActive: true,
+          })
+        }
+        return {
+          title: requireLT(values.title),
+          description: normalizeLT(values.description),
+          accessType: values.accessType,
+          price: isPurchase ? (values.price ?? null) : null,
+          publishedYear: values.publishedYear ?? null,
+          isbn: values.isbn?.trim() || null,
+          sortOrder: values.sortOrder ?? 0,
+          status: values.status,
+          authorIds: values.authorIds ?? [],
+          categoryIds: values.categoryIds ?? [],
+          collectionIds: values.collectionIds ?? [],
+          editions,
+          ...(values.cover === null ? { coverUrl: null } : {}),
+        }
+      }
+      const saved = await saveResource({
+        api: booksApi,
+        editing,
+        buildInput,
+        image: values.cover,
       })
-      await saveResource({ api: booksApi, editing, buildInput, image: values.cover })
-      message.success(editing ? 'Saqlandi' : "Qo'shildi")
-      setDrawerOpen(false)
+      // Qayta saqlash dublikat yaratmasligi uchun tahrirlash rejimiga o'tamiz.
+      setEditing(saved)
+      void queryClient.invalidateQueries({ queryKey: ['books'] })
+
+      // 3) Kontent fayllarini orqada yuklaymiz (format bo'yicha edition'ga moslab).
+      interface Job {
+        editionId: string
+        file: File
+        kind: 'CONTENT' | 'PREVIEW'
+        order: number
+        title?: LocalizedText
+      }
+      const jobs: Job[] = []
+      const audioEd = values.hasAudio
+        ? saved.editions.find((e) => e.format === 'AUDIO')
+        : undefined
+      const ebookEd = values.hasEbook
+        ? saved.editions.find((e) => e.format === 'EBOOK')
+        : undefined
+      if (audioEd) {
+        ;(values.audio?.chapters ?? []).forEach((ch, i) => {
+          if (!ch.file) return
+          const t = ch.title?.trim()
+          jobs.push({
+            editionId: audioEd.id,
+            file: ch.file,
+            kind: 'CONTENT',
+            order: ch.order ?? i,
+            title: t ? { uz: t, 'uz-Cyrl': toCyrillic(t) } : undefined,
+          })
+        })
+        if (values.audio?.previewFile)
+          jobs.push({ editionId: audioEd.id, file: values.audio.previewFile, kind: 'PREVIEW', order: 0 })
+      }
+      if (ebookEd) {
+        if (values.ebook?.contentFile)
+          jobs.push({ editionId: ebookEd.id, file: values.ebook.contentFile, kind: 'CONTENT', order: 0 })
+        if (values.ebook?.previewFile)
+          jobs.push({ editionId: ebookEd.id, file: values.ebook.previewFile, kind: 'PREVIEW', order: 0 })
+      }
+
+      for (let i = 0; i < jobs.length; i++) {
+        setUploadMsg(`Fayl yuklanmoqda (${i + 1}/${jobs.length})…`)
+        await uploadEditionContent(
+          jobs[i].editionId,
+          jobs[i].file,
+          jobs[i].kind,
+          jobs[i].order,
+          jobs[i].title,
+        )
+      }
+      setUploadMsg(null)
+
+      if (jobs.length) {
+        // Yuklangan fayl maydonlarini tozalaymiz (qayta saqlашда takror yuklanmasin).
+        const cur = form.getFieldsValue()
+        form.setFieldsValue({
+          audio: { ...cur.audio, chapters: [], previewFile: null },
+          ebook: { ...cur.ebook, contentFile: null, previewFile: null },
+        })
+        // Drawer ochiq qoladi — holat paneli READY/FAILED ni shu yerда ko'rsatadi.
+        message.success('Saqlandi — fayllar yuklandi, qayta ishlanmoqda. Holatni quyida kuzating.')
+      } else {
+        message.success(editing ? 'Saqlandi' : "Qo'shildi")
+        setDrawerOpen(false)
+      }
       void queryClient.invalidateQueries({ queryKey: ['books'] })
     } catch (e) {
       const err = getApiError(e)
       setFormError(err.errors?.length ? err.errors : [err.message])
     } finally {
+      setUploadMsg(null)
       setSaving(false)
     }
   }
@@ -282,9 +436,10 @@ export function BooksPage() {
       ),
     },
     {
-      title: 'Muallif',
-      key: 'author',
-      render: (_, r) => (r.author ? localize(r.author.name, lang) : '—'),
+      title: 'Mualliflar',
+      key: 'authors',
+      render: (_, r) =>
+        r.authors.length ? r.authors.map((a) => localize(a.name, lang)).join(', ') : '—',
     },
     {
       title: 'Holat',
@@ -335,16 +490,10 @@ export function BooksPage() {
     {
       title: 'Amallar',
       key: 'actions',
-      width: 150,
+      width: 120,
       fixed: 'right',
       render: (_, r) => (
         <Space>
-          <Button
-            size="small"
-            icon={<CloudUploadOutlined />}
-            title="Kontent"
-            onClick={() => openContent(r)}
-          />
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)} />
           <Popconfirm
             title="O'chirilsinmi?"
@@ -500,12 +649,20 @@ export function BooksPage() {
             }
           />
         )}
-        {editing && (
+        {uploadMsg ? (
+          <Alert
+            type="info"
+            showIcon
+            icon={<Spin size="small" />}
+            style={{ marginBottom: 16 }}
+            message={uploadMsg}
+          />
+        ) : (
           <Alert
             type="info"
             showIcon
             style={{ marginBottom: 16 }}
-            message="Audio/e-kitob fayllarini saqlagandan so'ng 'Kontent' tugmasi orqali yuklang."
+            message="Audio/e-kitob fayllarini formatlar bo'limida tanlang — Saqlашда avtomatik yuklanadi. Yuklash holatini (qayta ishlash) 'Kontent' tugmasида kuzating."
           />
         )}
         <Form<BookFormValues> form={form} layout="vertical" onFinish={handleFinish}>
@@ -514,15 +671,17 @@ export function BooksPage() {
             categoryOptions={categoryOptions}
             collectionOptions={collectionOptions}
             optionsLoading={optionsLoading}
+            editionIds={
+              editing
+                ? {
+                    AUDIO: editing.editions.find((e) => e.format === 'AUDIO')?.id,
+                    EBOOK: editing.editions.find((e) => e.format === 'EBOOK')?.id,
+                  }
+                : undefined
+            }
           />
         </Form>
       </Drawer>
-
-      <BookContentDrawer
-        book={contentBook}
-        open={contentOpen}
-        onClose={() => setContentOpen(false)}
-      />
     </Card>
   )
 }

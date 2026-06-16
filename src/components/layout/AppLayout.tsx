@@ -81,7 +81,7 @@ export function AppLayout() {
   ]
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ height: '100vh' }}>
       <Sider
         collapsible
         collapsed={collapsed}
@@ -91,6 +91,7 @@ export function AppLayout() {
         collapsedWidth={screens.lg ? 80 : 0}
         theme="dark"
         width={232}
+        style={{ height: '100vh', position: 'sticky', top: 0, insetInlineStart: 0 }}
       >
         <div
           style={{
@@ -108,10 +109,16 @@ export function AppLayout() {
         >
           {collapsed ? 'F' : 'Falaq Admin'}
         </div>
-        <Menu theme="dark" mode="inline" selectedKeys={[selectedKey]} items={menuItems} />
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[selectedKey]}
+          items={menuItems}
+          style={{ height: 'calc(100vh - 88px)', overflowY: 'auto', borderInlineEnd: 0 }}
+        />
       </Sider>
 
-      <Layout>
+      <Layout style={{ height: '100vh', overflow: 'hidden' }}>
         <Header
           style={{
             background: '#fff',
@@ -143,7 +150,7 @@ export function AppLayout() {
           </Space>
         </Header>
 
-        <Content style={{ margin: 16 }}>
+        <Content style={{ margin: 16, overflow: 'auto' }}>
           <Suspense
             fallback={
               <div style={{ textAlign: 'center', padding: 48 }}>

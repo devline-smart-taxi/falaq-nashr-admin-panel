@@ -177,13 +177,26 @@ export function BannersPage() {
       }}
       renderFields={() => (
         <>
-          <Form.Item name="title" label="Sarlavha" rules={[requiredLTRule]}>
+          <Form.Item name="title" label="Sarlavha" required rules={[requiredLTRule]}>
             <LocalizedTextInput placeholder="Banner sarlavhasi" />
           </Form.Item>
           <Form.Item name="subtitle" label="Sub-sarlavha">
             <LocalizedTextInput placeholder="Qo'shimcha matn" />
           </Form.Item>
-          <Form.Item name="image" label="Rasm">
+          <Form.Item
+            name="image"
+            label="Rasm"
+            required
+            tooltip="Rasmsiz banner mobil karuselда ko'rinmaydi"
+            rules={[
+              {
+                validator: (_, v) =>
+                  v instanceof File || typeof v === 'string'
+                    ? Promise.resolve()
+                    : Promise.reject(new Error('Banner rasmi majburiy')),
+              },
+            ]}
+          >
             <ImageUpload />
           </Form.Item>
 
