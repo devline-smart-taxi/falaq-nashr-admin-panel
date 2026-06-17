@@ -69,7 +69,8 @@ const MB = 1024 * 1024
 
 // CONTENT_PIPELINE.md cheklovlari.
 const AUDIO_MIMES = ['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/wav']
-const EBOOK_MIMES = ['application/epub+zip', 'application/pdf']
+// E-kitob: faqat EPUB (mobil reader to'liq qo'llaydi). PDF qabul qilinmaydi.
+const EBOOK_MIMES = ['application/epub+zip']
 
 /** Format + tur (CONTENT/PREVIEW) bo'yicha ruxsat etilgan MIME va maks hajm. */
 export function uploadLimits(
@@ -79,4 +80,21 @@ export function uploadLimits(
   const accept = format === 'AUDIO' ? AUDIO_MIMES : EBOOK_MIMES
   if (kind === 'PREVIEW') return { accept, maxBytes: 50 * MB }
   return { accept, maxBytes: format === 'AUDIO' ? 500 * MB : 100 * MB }
+}
+
+const MIME_LABEL: Record<string, string> = {
+  'audio/mpeg': 'MP3',
+  'audio/mp4': 'M4A',
+  'audio/aac': 'AAC',
+  'audio/ogg': 'OGG',
+  'audio/wav': 'WAV',
+  'application/epub+zip': 'EPUB',
+  'application/pdf': 'PDF',
+}
+
+/** Fayl maydoni tagiga ko'rsatish uchun: "MP3, M4A, … · maks 500 MB". */
+export function uploadHint(format: EditionFormat, kind: 'CONTENT' | 'PREVIEW'): string {
+  const { accept, maxBytes } = uploadLimits(format, kind)
+  const names = accept.map((m) => MIME_LABEL[m] ?? m).join(', ')
+  return `${names} · maks ${Math.round(maxBytes / MB)} MB`
 }

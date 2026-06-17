@@ -21,7 +21,7 @@ import { ImageUpload } from '@/components/form/ImageUpload'
 import { FileField } from '@/components/form/FileField'
 import { EditionAssetStatus } from './EditionAssetStatus'
 import { requiredLTRule } from '@/lib/lt'
-import { ACCESS_TYPE_OPTIONS, STATUS_OPTIONS, uploadLimits } from './constants'
+import { ACCESS_TYPE_OPTIONS, STATUS_OPTIONS, uploadLimits, uploadHint } from './constants'
 import type { EditionFormat } from '@/types/book'
 
 export interface SelectOption {
@@ -54,15 +54,21 @@ function ContentFileFields({
   group: 'audio' | 'ebook'
   format: EditionFormat
 }) {
-  const { accept, maxBytes } = uploadLimits(format, 'CONTENT')
-  const acceptStr = accept.join(',')
-  const maxMb = Math.round(maxBytes / 1024 / 1024)
+  const acceptStr = uploadLimits(format, 'CONTENT').accept.join(',')
   return (
     <Space align="start" wrap>
-      <Form.Item name={[group, 'contentFile']} label={`To'liq fayl (maks ${maxMb} MB)`}>
+      <Form.Item
+        name={[group, 'contentFile']}
+        label="To'liq fayl"
+        extra={uploadHint(format, 'CONTENT')}
+      >
         <FileField accept={acceptStr} />
       </Form.Item>
-      <Form.Item name={[group, 'previewFile']} label="Namuna (ixtiyoriy)">
+      <Form.Item
+        name={[group, 'previewFile']}
+        label="Namuna (ixtiyoriy)"
+        extra={uploadHint(format, 'PREVIEW')}
+      >
         <FileField accept={acceptStr} placeholder="Namuna fayli" />
       </Form.Item>
     </Space>
@@ -260,6 +266,9 @@ export function BookFormFields({
                     Bitta fayl bo'lsa — bitta bob (tartib 0, nom shart emas). Ko'p bobli
                     bo'lsa, har bobni tartib bilan qo'shing.
                   </Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Qabul qilinadi: {uploadHint('AUDIO', 'CONTENT')}
+                  </Typography.Text>
 
                   <Form.List name={['audio', 'chapters']}>
                     {(chapters, { add, remove }) => (
@@ -301,7 +310,11 @@ export function BookFormFields({
                     )}
                   </Form.List>
 
-                  <Form.Item name={['audio', 'previewFile']} label="Namuna (ixtiyoriy)">
+                  <Form.Item
+                    name={['audio', 'previewFile']}
+                    label="Namuna (ixtiyoriy)"
+                    extra={uploadHint('AUDIO', 'PREVIEW')}
+                  >
                     <FileField accept={AUDIO_ACCEPT} placeholder="Namuna fayli" />
                   </Form.Item>
 

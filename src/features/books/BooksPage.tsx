@@ -290,6 +290,12 @@ export function BooksPage() {
         }
       }
 
+      // PUBLISHED + yangi muqova fayli: muqova create'дан KEYIN yuklanadi, shuning
+      // uchun avval DRAFT/PROCESSING saqlaymiz, muqova yuklangach PUBLISHED qilamiz
+      // (aks holda backend "cover_required_to_publish" beradi).
+      const deferPublish = values.status === 'PUBLISHED' && values.cover instanceof File
+      const effectiveStatus: BookStatus = deferPublish ? 'DRAFT' : values.status
+
       // 2) Kitobni saqlaymiz (+muqova) — javobda editions[].id keladi.
       const isPurchase = values.accessType === 'PURCHASE'
       const buildInput = (): CreateBookInput => {
@@ -317,7 +323,7 @@ export function BooksPage() {
           publishedYear: values.publishedYear ?? null,
           isbn: values.isbn?.trim() || null,
           sortOrder: values.sortOrder ?? 0,
-          status: values.status,
+          status: effectiveStatus,
           authorIds: values.authorIds ?? [],
           categoryIds: values.categoryIds ?? [],
           collectionIds: values.collectionIds ?? [],
@@ -384,19 +390,21 @@ export function BooksPage() {
       }
       setUploadMsg(null)
 
-      if (jobs.length) {
-        // Yuklangan fayl maydonlarini tozalaymiz (qayta saqlашда takror yuklanmasin).
-        const cur = form.getFieldsValue()
-        form.setFieldsValue({
-          audio: { ...cur.audio, chapters: [], previewFile: null },
-          ebook: { ...cur.ebook, contentFile: null, previewFile: null },
-        })
-        // Drawer ochiq qoladi — holat paneli READY/FAILED ni shu yerда ko'rsatadi.
-        message.success('Saqlandi — fayllar yuklandi, qayta ishlanmoqda. Holatni quyida kuzating.')
-      } else {
-        message.success(editing ? 'Saqlandi' : "Qo'shildi")
-        setDrawerOpen(false)
+      // Muqova yuklangach — kechiktirilган PUBLISHED'ни qo'llaymiz.
+      if (deferPublish) {
+        await booksApi.update(saved.id, { status: 'PUBLISHED' })
       }
+
+      // Fayl yuklangan bo'lsa ham drawer darrov yopiladi; kontent fonда qayta
+      // ishlanadi (holatни kitobни tahrirlab ochsangiz kuzatasiz).
+      message.success(
+        jobs.length
+          ? 'Saqlandi — fayllar yuklandi, qayta ishlanmoqda'
+          : editing
+            ? 'Saqlandi'
+            : "Qo'shildi",
+      )
+      setDrawerOpen(false)
       void queryClient.invalidateQueries({ queryKey: ['books'] })
     } catch (e) {
       const err = getApiError(e)
