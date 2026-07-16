@@ -12,11 +12,15 @@ dist
 dist-ssr
 *.local
 
-# Env (keep .env.example + .env.production committed — sir emas)
+# Env:
+#   .env      → PROD (npm run build) — git'ga CHIQMAYDI, serverda qo'lda yaratiladi.
+#   .env.dev  → DEV  (vite --mode dev) — commit qilinadi (zararsiz proxy config).
 .env
-.env.*
-!.env.example
-!.env.production
+.env.local
+.env.*.local
+
+# Deploy (nginx config + qo'llanma) — git'ga chiqmaydi, serverda qo'lda sozlanadi.
+deploy/
 
 # Editor directories and files
 .vscode/*
