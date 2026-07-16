@@ -77,7 +77,8 @@ export function AuthorsPage() {
           isActive: values.isActive,
           ...(values.image === null ? { photoUrl: null } : {}),
         })
-        await saveResource({ api: authorsApi, editing, buildInput, image: values.image })
+        return (await saveResource({ api: authorsApi, editing, buildInput, image: values.image }))
+          .message
       }}
       renderFields={() => (
         <>

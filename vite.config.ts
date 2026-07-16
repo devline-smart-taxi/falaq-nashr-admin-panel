@@ -10,4 +10,14 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // Backend CORS faqat https://falaqnashr.uz'ga ruxsat beradi, shuning uchun
+  // dev'da so'rovlar Vite orqali proksilanadi (brauzer uchun same-origin).
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://api.falaqnashr.uz',
+        changeOrigin: true,
+      },
+    },
+  },
 })

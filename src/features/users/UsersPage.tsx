@@ -73,8 +73,8 @@ export function UsersPage() {
     if (!grantUser || !planId) return
     setGranting(true)
     try {
-      await grantSubscription(grantUser.id, planId)
-      message.success('Obuna biriktirildi')
+      const m = await grantSubscription(grantUser.id, planId)
+      message.success(m || 'Obuna biriktirildi')
       setGrantUser(null)
     } catch (e) {
       const { status } = getApiError(e)

@@ -105,3 +105,12 @@ export interface UploadUrl {
   uploadUrl: string
   expiresIn: number
 }
+
+// E-kitob mundarijasi (TOC). Backend EPUB'дан avtomat ajratadi; admin tahrirlaydi.
+export interface TocEntry {
+  title: string
+  /** Bob boshidan ~50 belgilik toza matn (mobil shu bilan sakraydi). */
+  anchor: string
+  /** 0–100 (zaxira navigatsiya). */
+  percent: number
+}

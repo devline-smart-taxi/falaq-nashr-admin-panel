@@ -36,12 +36,6 @@ export function ReviewsPage() {
     queryFn: () => booksApi.list({ limit: 100 }),
   })
 
-  const bookMap = useMemo(() => {
-    const m = new Map<string, string>()
-    for (const b of booksQ.data?.items ?? []) m.set(b.id, localize(b.title, lang))
-    return m
-  }, [booksQ.data, lang])
-
   const bookOptions = useMemo(
     () => (booksQ.data?.items ?? []).map((b) => ({ value: b.id, label: localize(b.title, lang) })),
     [booksQ.data, lang],
@@ -56,8 +50,8 @@ export function ReviewsPage() {
   async function handleDelete(id: string) {
     setDeletingId(id)
     try {
-      await deleteReview(id)
-      message.success("Sharh o'chirildi")
+      const m = await deleteReview(id)
+      message.success(m || "Sharh o'chirildi")
       void queryClient.invalidateQueries({ queryKey: ['reviews'] })
     } catch (e) {
       message.error(getApiError(e).message)
@@ -82,10 +76,9 @@ export function ReviewsPage() {
     },
     {
       title: 'Kitob',
-      dataIndex: 'bookId',
-      key: 'bookId',
+      key: 'book',
       width: 200,
-      render: (id: string) => bookMap.get(id) ?? id,
+      render: (_, r) => localize(r.bookTitle, lang) || r.bookId,
     },
     {
       title: 'Matn',

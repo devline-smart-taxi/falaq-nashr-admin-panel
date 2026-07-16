@@ -94,7 +94,7 @@ export function PlansPage() {
           sortOrder: values.sortOrder ?? 0,
           isActive: values.isActive,
         })
-        await saveResource({ api: plansApi, editing, buildInput })
+        return (await saveResource({ api: plansApi, editing, buildInput })).message
       }}
       renderFields={() => (
         <>

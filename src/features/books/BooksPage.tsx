@@ -223,8 +223,8 @@ export function BooksPage() {
   async function handleDelete(id: string) {
     setDeletingId(id)
     try {
-      await booksApi.remove(id)
-      message.success("O'chirildi")
+      const res = await booksApi.remove(id)
+      message.success(res.message || "O'chirildi")
       void queryClient.invalidateQueries({ queryKey: ['books'] })
     } catch (e) {
       message.error(getApiError(e).message)
@@ -331,12 +331,13 @@ export function BooksPage() {
           ...(values.cover === null ? { coverUrl: null } : {}),
         }
       }
-      const saved = await saveResource({
+      const saveRes = await saveResource({
         api: booksApi,
         editing,
         buildInput,
         image: values.cover,
       })
+      const saved = saveRes.data
       // Qayta saqlash dublikat yaratmasligi uchun tahrirlash rejimiga o'tamiz.
       setEditing(saved)
       void queryClient.invalidateQueries({ queryKey: ['books'] })
@@ -400,9 +401,7 @@ export function BooksPage() {
       message.success(
         jobs.length
           ? 'Saqlandi — fayllar yuklandi, qayta ishlanmoqda'
-          : editing
-            ? 'Saqlandi'
-            : "Qo'shildi",
+          : saveRes.message || (editing ? 'Saqlandi' : "Qo'shildi"),
       )
       setDrawerOpen(false)
       void queryClient.invalidateQueries({ queryKey: ['books'] })

@@ -35,13 +35,13 @@ export function NotificationsPage() {
   async function onFinish(values: BroadcastInput) {
     setSending(true)
     try {
-      await sendBroadcast({
+      const m = await sendBroadcast({
         type: values.type,
         title: requireLT(values.title),
         body: requireLT(values.body),
         refId: values.refId || undefined,
       })
-      message.success('Bildirishnoma navbatga qo‘shildi')
+      message.success(m || 'Bildirishnoma navbatga qo‘shildi')
       form.resetFields()
     } catch (e) {
       message.error(getApiError(e).message)

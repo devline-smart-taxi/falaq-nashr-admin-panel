@@ -1,4 +1,4 @@
-import { http } from '@/api/client'
+import { httpMsg } from '@/api/client'
 import type { LocalizedText } from '@/types/api'
 
 export type NotificationType = 'NEW_BOOK' | 'PROMO' | 'REMINDER' | 'LICENSE_EXPIRY'
@@ -10,7 +10,7 @@ export interface BroadcastInput {
   refId?: string
 }
 
-/** Hammaga push/in-app yuboradi (background navbatga tushadi). */
-export function sendBroadcast(input: BroadcastInput): Promise<unknown> {
-  return http.post('/notifications/broadcast', input)
+/** Hammaga push/in-app yuboradi (background navbatga tushadi). Backend xabarini qaytaradi. */
+export function sendBroadcast(input: BroadcastInput): Promise<string> {
+  return httpMsg.post<null>('/notifications/broadcast', input).then((r) => r.message)
 }

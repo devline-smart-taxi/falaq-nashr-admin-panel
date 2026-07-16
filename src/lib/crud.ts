@@ -1,14 +1,15 @@
-import { http } from '@/api/client'
+import { http, httpMsg, type ApiResult } from '@/api/client'
 import type { Paginated, PaginationParams } from '@/types/api'
 
 export interface CrudApi<T, C, U> {
   list: (params?: PaginationParams) => Promise<Paginated<T>>
   get: (id: string) => Promise<T>
-  create: (input: C) => Promise<T>
-  update: (id: string, input: U) => Promise<T>
-  remove: (id: string) => Promise<void>
+  // Yozish metodlari backend `message`ини ham qaytaradi (success toast uchun).
+  create: (input: C) => Promise<ApiResult<T>>
+  update: (id: string, input: U) => Promise<ApiResult<T>>
+  remove: (id: string) => Promise<ApiResult<null>>
   /** Rasm yuklash — yozuv yaratilgach/ olingach (multipart `file`). */
-  uploadImage?: (id: string, file: File) => Promise<T>
+  uploadImage?: (id: string, file: File) => Promise<ApiResult<T>>
 }
 
 interface CreateCrudOptions {
@@ -58,15 +59,17 @@ export async function saveResource<T extends { id: string }, C, U>(opts: {
   buildInput: () => C & U
   /** File = yangi rasm; null/undefined/string = yuklash shart emas. */
   image?: File | string | null
-}): Promise<T> {
+}): Promise<ApiResult<T>> {
   const { api, editing, buildInput, image } = opts
-  const record = editing
+  const res = editing
     ? await api.update(editing.id, buildInput())
     : await api.create(buildInput())
+  let record = res.data
   if (image instanceof File && api.uploadImage) {
-    return api.uploadImage(record.id, image)
+    record = (await api.uploadImage(record.id, image)).data
   }
-  return record
+  // Xabar — create/update'дан (rasm yuklash xabari emas).
+  return { data: record, message: res.message }
 }
 
 export function createCrudApi<T, C, U>(opts: CreateCrudOptions): CrudApi<T, C, U> {
@@ -77,14 +80,14 @@ export function createCrudApi<T, C, U>(opts: CreateCrudOptions): CrudApi<T, C, U
       ? (params) => http.get<unknown>(path, { params }).then(normalizeList<T>)
       : (params) => http.get<Paginated<T>>(path, { params }),
     get: (id) => http.get<T>(`${basePath}/${id}`),
-    create: (input) => http.post<T>(basePath, input),
-    update: (id, input) => http.patch<T>(`${basePath}/${id}`, input),
-    remove: (id) => http.delete<void>(`${basePath}/${id}`),
+    create: (input) => httpMsg.post<T>(basePath, input),
+    update: (id, input) => httpMsg.patch<T>(`${basePath}/${id}`, input),
+    remove: (id) => httpMsg.delete<null>(`${basePath}/${id}`),
     uploadImage: imageSegment
       ? (id, file) => {
           const fd = new FormData()
           fd.append('file', file)
-          return http.post<T>(`${basePath}/${id}/${imageSegment}`, fd)
+          return httpMsg.post<T>(`${basePath}/${id}/${imageSegment}`, fd)
         }
       : undefined,
   }

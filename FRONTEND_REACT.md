@@ -488,6 +488,24 @@ yuklanadi (500MB fayl server orqali o'tmaydi). Har edition (format) uchun oqim:
 - Barcha kerakli asset **READY** bo'lgach kitobni chop eting:
   `PATCH /books/:id { status:"PUBLISHED" }`.
 
+#### E-kitob mundarijasi (TOC) — tahrirlanadigan
+
+EPUB shifrlanганда backend **avtomat** mundarija ajratadi (nav→ncx→sarlavha
+fallback). Admin uni ko'rib/tuzatib chiqadi:
+
+```
+GET /editions/:editionId/toc            → { toc: [{ title, anchor, percent }] }
+PUT /editions/:editionId/toc            { toc: [{ title, anchor, percent }] }   (to'liq almashtirish)
+```
+
+- `READY` bo'lgach `GET .../toc` bilan **draft** ro'yxatни oling va jadval/forma
+  qilib ko'rsating (nom tahrirlanadi, qator qo'shish/o'chirish/tartib).
+- **`toc` bo'sh** (`[]`) bo'lsa → 🔴 **ogohlantirish**: "boblar topilmadi, qo'lda
+  qo'shing". Publish'дан oldin admin to'ldirishi tavsiya etiladi.
+- `anchor` — bob boshidan ~50 belgilik **toza matn** (mobil shu bilan sakraydi);
+  `percent` — 0–100 (zaxira). Admin nom + (kerak bo'lsa) anchor/percentни tuzatadi.
+- Saqlash: `PUT .../toc` to'liq ro'yxatni almashtiradi.
+
 ```ts
 // order/title — faqat audio bob bo'lib yuklashda; aks holda berMANG (0 bo'ladi).
 async function uploadContent(
@@ -548,6 +566,9 @@ POST /admin/users/:userId/subscription   { planId }
 GET    /reviews?bookId=&page&limit    → barcha sharhlar (sahifalangan)
 DELETE /reviews/:id                   → sharhni o'chirish
 ```
+
+Har sharh: `{ id, bookId, bookTitle, userName, rating, text, createdAt }`.
+`bookTitle` — ko'p tilli obyekt (qaysi kitob ekanini ko'rsatish uchun).
 
 ### Push / bildirishnoma yuborish (hammaga)
 

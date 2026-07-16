@@ -87,6 +87,27 @@ export const http = {
     pickData<T>(api.delete<ApiResponse<T>>(url, config)),
 }
 
+// --- Helpers: data + backend `message` (success toast'lari uchun) ---
+export interface ApiResult<T> {
+  data: T
+  message: string
+}
+
+function pickResult<T>(p: Promise<AxiosResponse<ApiResponse<T>>>): Promise<ApiResult<T>> {
+  return p.then((r) => ({ data: r.data.data, message: r.data.message }))
+}
+
+export const httpMsg = {
+  post: <T>(url: string, body?: unknown, config?: Parameters<typeof api.post>[2]) =>
+    pickResult<T>(api.post<ApiResponse<T>>(url, body, config)),
+  patch: <T>(url: string, body?: unknown, config?: Parameters<typeof api.patch>[2]) =>
+    pickResult<T>(api.patch<ApiResponse<T>>(url, body, config)),
+  put: <T>(url: string, body?: unknown, config?: Parameters<typeof api.put>[2]) =>
+    pickResult<T>(api.put<ApiResponse<T>>(url, body, config)),
+  delete: <T>(url: string, config?: Parameters<typeof api.delete>[1]) =>
+    pickResult<T>(api.delete<ApiResponse<T>>(url, config)),
+}
+
 export interface NormalizedApiError {
   message: string
   errors?: string[]

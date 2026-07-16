@@ -79,7 +79,7 @@ export function AdminsPage() {
             isActive: values.isActive,
           }
           if (values.password?.trim()) input.password = values.password.trim()
-          await adminsApi.update(editing.id, input)
+          return (await adminsApi.update(editing.id, input)).message
         } else {
           const input: CreateAdminInput = {
             email: values.email.trim(),
@@ -87,7 +87,7 @@ export function AdminsPage() {
             fullName: values.fullName.trim(),
             isActive: values.isActive,
           }
-          await adminsApi.create(input)
+          return (await adminsApi.create(input)).message
         }
       }}
       renderFields={(editing) => (

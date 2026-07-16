@@ -76,7 +76,9 @@ export function CategoriesPage() {
           isActive: values.isActive,
           ...(values.image === null ? { iconUrl: null } : {}),
         })
-        await saveResource({ api: categoriesApi, editing, buildInput, image: values.image })
+        return (
+          await saveResource({ api: categoriesApi, editing, buildInput, image: values.image })
+        ).message
       }}
       renderFields={() => (
         <>

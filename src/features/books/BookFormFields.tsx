@@ -20,6 +20,7 @@ import { LocalizedTextInput } from '@/components/form/LocalizedTextInput'
 import { ImageUpload } from '@/components/form/ImageUpload'
 import { FileField } from '@/components/form/FileField'
 import { EditionAssetStatus } from './EditionAssetStatus'
+import { EbookTocEditor } from './EbookTocEditor'
 import { requiredLTRule } from '@/lib/lt'
 import { ACCESS_TYPE_OPTIONS, STATUS_OPTIONS, uploadLimits, uploadHint } from './constants'
 import type { EditionFormat } from '@/types/book'
@@ -355,7 +356,12 @@ export function BookFormFields({
                     <InputNumber min={0} style={{ width: 160 }} />
                   </Form.Item>
                   <ContentFileFields group="ebook" format="EBOOK" />
-                  {editionIds?.EBOOK && <EditionAssetStatus editionId={editionIds.EBOOK} />}
+                  {editionIds?.EBOOK && (
+                    <>
+                      <EditionAssetStatus editionId={editionIds.EBOOK} />
+                      <EbookTocEditor editionId={editionIds.EBOOK} />
+                    </>
+                  )}
                 </Space>
               ) : (
                 <Typography.Text type="secondary">

@@ -1,9 +1,11 @@
-import { http } from '@/api/client'
+import { http, httpMsg } from '@/api/client'
 import type { AppUser } from '@/types/user'
 
-/** Foydalanuvchiga to'lovsiz obuna biriktirish (admin grant). */
-export function grantSubscription(userId: string, planId: string): Promise<unknown> {
-  return http.post(`/admin/users/${userId}/subscription`, { planId })
+/** Foydalanuvchiga to'lovsiz obuna biriktirish (admin grant). Backend xabarini qaytaradi. */
+export function grantSubscription(userId: string, planId: string): Promise<string> {
+  return httpMsg
+    .post<null>(`/admin/users/${userId}/subscription`, { planId })
+    .then((r) => r.message)
 }
 
 function isItemsWrapper(d: unknown): d is { items: AppUser[] } {

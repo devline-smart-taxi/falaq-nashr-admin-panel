@@ -1,4 +1,4 @@
-import { http } from '@/api/client'
+import { http, httpMsg } from '@/api/client'
 import { createCrudApi } from '@/lib/crud'
 import type { LocalizedText, Paginated } from '@/types/api'
 import type {
@@ -8,6 +8,7 @@ import type {
   BookListParams,
   CreateBookInput,
   RequestUploadInput,
+  TocEntry,
   UpdateBookInput,
   UploadUrl,
 } from '@/types/book'
@@ -79,4 +80,17 @@ export async function uploadEditionContent(
 
 export function setPreviewAccess(editionId: string, locked: boolean): Promise<unknown> {
   return http.patch(`/editions/${editionId}/preview-access`, { locked })
+}
+
+// --- E-kitob mundarijasi (TOC) ---
+
+export function getEditionToc(editionId: string): Promise<TocEntry[]> {
+  return http
+    .get<{ toc: TocEntry[] | null }>(`/editions/${editionId}/toc`)
+    .then((d) => d.toc ?? [])
+}
+
+/** TOC'ни to'liq almashtiradi. Backend xabarini qaytaradi. */
+export function updateEditionToc(editionId: string, toc: TocEntry[]): Promise<string> {
+  return httpMsg.put<unknown>(`/editions/${editionId}/toc`, { toc }).then((r) => r.message)
 }

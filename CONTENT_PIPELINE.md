@@ -100,6 +100,14 @@ Barcha kerakli asset `READY` bo'lgach, admin kitobni `PUBLISHED` qiladi.
   (bosma jami beti). "Haqiqiy" bosma sahifa mobil reader'да EPUB **page-list**
   bilan ko'rsatiladi (EPUB ichidagi `epub:type="pagebreak"` markerlar) — backend
   qo'shmaydi, nashriyot EPUB'ida bo'lishi kerak.
+- **E-kitob mundarijasi (`edition.toc`)** — CONTENT EPUB shifrlanganда worker xom
+  fayldan **avtomat** ajratadi (`epub-toc.util`): `META-INF` → OPF spine → toza
+  matn → bob aniqlash (nav.xhtml → toc.ncx → `<h1>–<h3>` → shablon). Har bob:
+  `{ title, anchor (toza-matn parchasi), percent }`. Admin `GET/PUT
+/editions/:id/toc` bilan tahrirlaydi. Best-effort (xato/buzuq EPUB → `toc=null`,
+  admin qo'lда kiritadi); hajm > 30MB → o'tkaziladi. Delivery javobida `toc[]`
+  qaytadi (reader anchor/percent bilan bobga sakraydi). **Clean-text algoritmi
+  mobil bilan bir xil bo'lishi shart** — `MOBILE_FLUTTER.md`'да yozilgan.
 
 ## Bepul preview (ommaviy)
 

@@ -173,7 +173,8 @@ export function BannersPage() {
           startsAt: values.startsAt ? values.startsAt.toISOString() : null,
           endsAt: values.endsAt ? values.endsAt.toISOString() : null,
         })
-        await saveResource({ api: bannersApi, editing, buildInput, image: values.image })
+        return (await saveResource({ api: bannersApi, editing, buildInput, image: values.image }))
+          .message
       }}
       renderFields={() => (
         <>

@@ -95,7 +95,9 @@ export function CollectionsPage() {
           isActive: values.isActive,
           ...(values.image === null ? { coverUrl: null } : {}),
         })
-        await saveResource({ api: collectionsApi, editing, buildInput, image: values.image })
+        return (
+          await saveResource({ api: collectionsApi, editing, buildInput, image: values.image })
+        ).message
       }}
       renderFields={() => (
         <>

@@ -43,8 +43,8 @@ export interface ResourceListPageProps<T extends WithId, V extends object> {
   toFormValues: (record: T) => V
   /** Yangi yozuv uchun boshlang'ich forma qiymatlari. */
   initialValues: V
-  /** Saqlash ketma-ketligi (create/update + rasm yuklash). */
-  onSubmit: (values: V, editing: T | null) => Promise<void>
+  /** Saqlash ketma-ketligi (create/update + rasm yuklash). Backend xabarini qaytarsa — toast'да ishlatiladi. */
+  onSubmit: (values: V, editing: T | null) => Promise<string | void>
   /** Berilgan qator uchun tahrirlash/o'chirish o'chirib qo'yiladi (masalan SUPER_ADMIN). */
   rowReadonly?: (record: T) => boolean
 }
@@ -106,8 +106,8 @@ export function ResourceListPage<T extends WithId, V extends object>({
   async function handleDelete(id: string) {
     setDeletingId(id)
     try {
-      await api.remove(id)
-      message.success("O'chirildi")
+      const res = await api.remove(id)
+      message.success(res.message || "O'chirildi")
       invalidate()
     } catch (e) {
       message.error(getApiError(e).message)
@@ -120,8 +120,8 @@ export function ResourceListPage<T extends WithId, V extends object>({
     setSaving(true)
     setFormError(null)
     try {
-      await onSubmit(values, editing)
-      message.success(editing ? 'Saqlandi' : "Qo'shildi")
+      const msg = await onSubmit(values, editing)
+      message.success(msg || (editing ? 'Saqlandi' : "Qo'shildi"))
       setDrawerOpen(false)
       invalidate()
     } catch (e) {
