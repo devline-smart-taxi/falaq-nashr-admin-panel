@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 import { localize } from '@/lib/localize'
 import { formatDate } from '@/lib/format'
 import { saveResource } from '@/lib/crud'
-import { normalizeLT, requireLT, requiredLTRule } from '@/lib/lt'
+import { normalizeLT, requireLT, requiredLTRule, optionalLTRule } from '@/lib/lt'
 import { booksApi } from '@/features/books/api'
 import { collectionsApi } from '@/features/collections/api'
 import type { Banner, BannerTargetType, CreateBannerInput } from '@/types/banner'
@@ -181,7 +181,7 @@ export function BannersPage() {
           <Form.Item name="title" label="Sarlavha" required rules={[requiredLTRule]}>
             <LocalizedTextInput placeholder="Banner sarlavhasi" />
           </Form.Item>
-          <Form.Item name="subtitle" label="Sub-sarlavha">
+          <Form.Item name="subtitle" label="Sub-sarlavha" rules={[optionalLTRule]}>
             <LocalizedTextInput placeholder="Qo'shimcha matn" />
           </Form.Item>
           <Form.Item

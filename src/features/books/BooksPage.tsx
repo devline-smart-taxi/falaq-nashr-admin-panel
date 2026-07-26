@@ -26,7 +26,6 @@ import {
 import { getApiError } from '@/api/client'
 import { saveResource } from '@/lib/crud'
 import { requireLT, normalizeLT } from '@/lib/lt'
-import { toCyrillic } from '@/lib/translit'
 import { localize, formatUZS } from '@/lib/localize'
 import { formatDate } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
@@ -60,7 +59,7 @@ import {
 // Audio bobi — tartib + nom + fayl (Saqlашда yuklanadi). durationSeconds avtomat.
 interface AudioChapter {
   order?: number
-  title?: string
+  title?: LocalizedText
   file?: File | null
 }
 interface AudioGroup {
@@ -96,9 +95,9 @@ interface BookFormValues {
 const EMPTY_FORM: BookFormValues = {
   title: { uz: '' },
   description: { uz: '' },
-  accessType: 'PURCHASE',
+  accessType: 'SUBSCRIPTION',
   sortOrder: 0,
-  status: 'DRAFT',
+  status: 'PUBLISHED',
   authorIds: [],
   categoryIds: [],
   collectionIds: [],
@@ -178,6 +177,23 @@ export function BooksPage() {
   )
   const optionsLoading =
     authorsQ.isLoading || categoriesQ.isLoading || collectionsQ.isLoading
+
+  // Select ichida tez yaratish: yaratadi, ro'yxatni yangilaydi, yangi {value,label} qaytaradi.
+  const createAuthor = async (name: LocalizedText) => {
+    const { data } = await authorsApi.create({ name })
+    await queryClient.invalidateQueries({ queryKey: ['authors', 'options'] })
+    return { value: data.id, label: localize(data.name, lang) }
+  }
+  const createCategory = async (name: LocalizedText) => {
+    const { data } = await categoriesApi.create({ name })
+    await queryClient.invalidateQueries({ queryKey: ['categories', 'options'] })
+    return { value: data.id, label: localize(data.name, lang) }
+  }
+  const createCollection = async (name: LocalizedText) => {
+    const { data } = await collectionsApi.create({ name })
+    await queryClient.invalidateQueries({ queryKey: ['collections', 'options'] })
+    return { value: data.id, label: localize(data.name, lang) }
+  }
 
   function setFilter(patch: Partial<Filters>) {
     setFilters((f) => ({ ...f, ...patch }))
@@ -360,13 +376,13 @@ export function BooksPage() {
       if (audioEd) {
         ;(values.audio?.chapters ?? []).forEach((ch, i) => {
           if (!ch.file) return
-          const t = ch.title?.trim()
           jobs.push({
             editionId: audioEd.id,
             file: ch.file,
             kind: 'CONTENT',
             order: ch.order ?? i,
-            title: t ? { uz: t, 'uz-Cyrl': toCyrillic(t) } : undefined,
+            // Bo'sh tillar tashlanadi; `uz` bo'sh bo'lsa butun nom yuborilmaydi.
+            title: normalizeLT(ch.title) ?? undefined,
           })
         })
         if (values.audio?.previewFile)
@@ -678,6 +694,9 @@ export function BooksPage() {
             categoryOptions={categoryOptions}
             collectionOptions={collectionOptions}
             optionsLoading={optionsLoading}
+            createAuthor={createAuthor}
+            createCategory={createCategory}
+            createCollection={createCollection}
             editionIds={
               editing
                 ? {

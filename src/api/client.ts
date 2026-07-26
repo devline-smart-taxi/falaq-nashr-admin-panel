@@ -135,8 +135,17 @@ export function getApiError(error: unknown): NormalizedApiError {
     const data = error.response?.data as ApiErrorResponse | undefined
 
     // Server/tarmoq xatolari foydalanuvchiga oshkor qilinmaydi — faqat console (dev).
+    // Butun axios error'ni yozmaymiz: `config.headers.Authorization` (Bearer token)
+    // console'ga chiqmasin — faqat zararsiz xulosa.
     const isServerOrNetwork = status === undefined || status >= 500
-    if (isServerOrNetwork) console.error('[API error]', error)
+    if (isServerOrNetwork) {
+      console.error('[API error]', {
+        status,
+        method: error.config?.method,
+        url: error.config?.url,
+        message: error.message,
+      })
+    }
 
     // 403 → 404: resurs mavjudligini yashiramiz.
     if (status === 403) status = 404

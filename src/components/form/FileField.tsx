@@ -1,5 +1,5 @@
-import { Upload, Button, Space, Typography } from 'antd'
-import { UploadOutlined, PaperClipOutlined, DeleteOutlined } from '@ant-design/icons'
+import { Upload, Button, Space, Typography, Tooltip } from 'antd'
+import { UploadOutlined, PaperClipOutlined, CloseOutlined } from '@ant-design/icons'
 
 interface Props {
   value?: File | null
@@ -35,13 +35,14 @@ export function FileField({ value, onChange, accept, placeholder }: Props) {
           <Typography.Text ellipsis style={{ maxWidth: 180 }}>
             {value.name}
           </Typography.Text>
-          <Button
-            type="text"
-            danger
-            size="small"
-            icon={<DeleteOutlined />}
-            onClick={() => onChange?.(null)}
-          />
+          <Tooltip title="Faylni olib tashlash">
+            <Button
+              type="text"
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={() => onChange?.(null)}
+            />
+          </Tooltip>
         </Space>
       )}
     </Space>

@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 import { localize } from '@/lib/localize'
 import { formatDate } from '@/lib/format'
 import { saveResource } from '@/lib/crud'
-import { normalizeLT, requireLT, requiredLTRule } from '@/lib/lt'
+import { normalizeLT, requireLT, requiredLTRule, optionalLTRule } from '@/lib/lt'
 import type { Author, CreateAuthorInput } from '@/types/catalog'
 import type { LocalizedText } from '@/types/api'
 import { authorsApi } from './api'
@@ -85,7 +85,7 @@ export function AuthorsPage() {
           <Form.Item name="name" label="Ism" required rules={[requiredLTRule]}>
             <LocalizedTextInput placeholder="Masalan: Abdulla Qodiriy" />
           </Form.Item>
-          <Form.Item name="bio" label="Bio">
+          <Form.Item name="bio" label="Bio" rules={[optionalLTRule]}>
             <LocalizedTextInput multiline placeholder="Muallif haqida" />
           </Form.Item>
           <Form.Item name="image" label="Rasm">

@@ -17,13 +17,15 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons'
 import { LocalizedTextInput } from '@/components/form/LocalizedTextInput'
+import { QuickCreateSelect } from '@/components/form/QuickCreateSelect'
 import { ImageUpload } from '@/components/form/ImageUpload'
 import { FileField } from '@/components/form/FileField'
 import { EditionAssetStatus } from './EditionAssetStatus'
 import { EbookTocEditor } from './EbookTocEditor'
-import { requiredLTRule } from '@/lib/lt'
+import { requiredLTRule, optionalLTRule } from '@/lib/lt'
 import { ACCESS_TYPE_OPTIONS, STATUS_OPTIONS, uploadLimits, uploadHint } from './constants'
 import type { EditionFormat } from '@/types/book'
+import type { LocalizedText } from '@/types/api'
 
 export interface SelectOption {
   value: string
@@ -43,6 +45,10 @@ interface Props {
   categoryOptions: SelectOption[]
   collectionOptions: SelectOption[]
   optionsLoading?: boolean
+  /** Select ichида tez yaratish — nomдан yangi element yaratib {value,label} qaytaradi. */
+  createAuthor: (name: LocalizedText) => Promise<SelectOption>
+  createCategory: (name: LocalizedText) => Promise<SelectOption>
+  createCollection: (name: LocalizedText) => Promise<SelectOption>
   /** Tahrirlашда mavjud edition id'lari (holat paneli ko'rsatish uchun). */
   editionIds?: Partial<Record<EditionFormat, string>>
 }
@@ -81,6 +87,9 @@ export function BookFormFields({
   categoryOptions,
   collectionOptions,
   optionsLoading,
+  createAuthor,
+  createCategory,
+  createCollection,
   editionIds,
 }: Props) {
   return (
@@ -89,19 +98,7 @@ export function BookFormFields({
         <LocalizedTextInput placeholder="Masalan: Oʻtkan kunlar" />
       </Form.Item>
 
-      <Form.Item
-        name="description"
-        label="Tavsif"
-        required
-        rules={[
-          {
-            validator: (_, v) =>
-              v?.uz?.trim()
-                ? Promise.resolve()
-                : Promise.reject(new Error('Tavsif majburiy')),
-          },
-        ]}
-      >
+      <Form.Item name="description" label="Tavsif" required rules={[requiredLTRule]}>
         <LocalizedTextInput multiline placeholder="Kitob haqida" />
       </Form.Item>
 
@@ -171,14 +168,12 @@ export function BookFormFields({
         required
         rules={[{ validator: requireNonEmpty('Kamida bitta muallif') }]}
       >
-        <Select
-          mode="multiple"
-          allowClear
-          showSearch
-          optionFilterProp="label"
+        <QuickCreateSelect
           placeholder="Muallif(lar) tanlang"
           options={authorOptions}
           loading={optionsLoading}
+          entityLabel="muallif"
+          createFn={createAuthor}
         />
       </Form.Item>
 
@@ -188,14 +183,12 @@ export function BookFormFields({
         required
         rules={[{ validator: requireNonEmpty('Kamida bitta kategoriya') }]}
       >
-        <Select
-          mode="multiple"
-          allowClear
-          showSearch
-          optionFilterProp="label"
+        <QuickCreateSelect
           placeholder="Kategoriyalar"
           options={categoryOptions}
           loading={optionsLoading}
+          entityLabel="kategoriya"
+          createFn={createCategory}
         />
       </Form.Item>
 
@@ -205,14 +198,12 @@ export function BookFormFields({
         required
         rules={[{ validator: requireNonEmpty('Kamida bitta kolleksiya') }]}
       >
-        <Select
-          mode="multiple"
-          allowClear
-          showSearch
-          optionFilterProp="label"
+        <QuickCreateSelect
           placeholder="Kolleksiyalar"
           options={collectionOptions}
           loading={optionsLoading}
+          entityLabel="kolleksiya"
+          createFn={createCollection}
         />
       </Form.Item>
 
@@ -274,8 +265,24 @@ export function BookFormFields({
                   <Form.List name={['audio', 'chapters']}>
                     {(chapters, { add, remove }) => (
                       <Space direction="vertical" style={{ width: '100%' }}>
-                        {chapters.map((ch) => (
-                          <Card key={ch.key} size="small" type="inner">
+                        {chapters.map((ch, i) => (
+                          <Card
+                            key={ch.key}
+                            size="small"
+                            type="inner"
+                            title={`${i + 1}-bob`}
+                            extra={
+                              <Button
+                                type="text"
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                onClick={() => remove(ch.name)}
+                              >
+                                O'chirish
+                              </Button>
+                            }
+                          >
                             <Space align="start" wrap>
                               <Form.Item
                                 name={[ch.name, 'order']}
@@ -284,19 +291,17 @@ export function BookFormFields({
                               >
                                 <InputNumber min={0} style={{ width: 80 }} />
                               </Form.Item>
-                              <Form.Item name={[ch.name, 'title']} label="Bob nomi (ixtiyoriy)">
-                                <Input placeholder="masalan: 1-bob" style={{ width: 180 }} />
+                              <Form.Item
+                                name={[ch.name, 'title']}
+                                label="Bob nomi (ixtiyoriy)"
+                                style={{ width: 260 }}
+                                rules={[optionalLTRule]}
+                              >
+                                <LocalizedTextInput placeholder="masalan: 1-bob" />
                               </Form.Item>
                               <Form.Item name={[ch.name, 'file']} label="Fayl">
                                 <FileField accept={AUDIO_ACCEPT} />
                               </Form.Item>
-                              <Button
-                                type="text"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => remove(ch.name)}
-                                style={{ marginTop: 30 }}
-                              />
                             </Space>
                           </Card>
                         ))}

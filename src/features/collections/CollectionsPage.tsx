@@ -7,7 +7,7 @@ import { ActiveTag } from '@/components/common/ActiveTag'
 import { useAuthStore } from '@/stores/auth'
 import { localize } from '@/lib/localize'
 import { saveResource } from '@/lib/crud'
-import { normalizeLT, requireLT, requiredLTRule } from '@/lib/lt'
+import { normalizeLT, requireLT, requiredLTRule, optionalLTRule } from '@/lib/lt'
 import type { Collection, CreateCollectionInput } from '@/types/catalog'
 import type { LocalizedText } from '@/types/api'
 import { collectionsApi } from './api'
@@ -104,7 +104,7 @@ export function CollectionsPage() {
           <Form.Item name="name" label="Nom" required rules={[requiredLTRule]}>
             <LocalizedTextInput placeholder="Masalan: Tavsiya etamiz" />
           </Form.Item>
-          <Form.Item name="description" label="Tavsif">
+          <Form.Item name="description" label="Tavsif" rules={[optionalLTRule]}>
             <LocalizedTextInput multiline placeholder="Kolleksiya haqida" />
           </Form.Item>
           <Form.Item name="image" label="Muqova">

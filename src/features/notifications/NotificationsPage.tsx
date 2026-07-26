@@ -73,19 +73,7 @@ export function NotificationsPage() {
           <LocalizedTextInput placeholder="Bildirishnoma sarlavhasi" />
         </Form.Item>
 
-        <Form.Item
-          name="body"
-          label="Matn"
-          required
-          rules={[
-            {
-              validator: (_, v) =>
-                v?.uz?.trim()
-                  ? Promise.resolve()
-                  : Promise.reject(new Error('Matn majburiy')),
-            },
-          ]}
-        >
+        <Form.Item name="body" label="Matn" required rules={[requiredLTRule]}>
           <LocalizedTextInput multiline placeholder="Bildirishnoma matni" />
         </Form.Item>
 

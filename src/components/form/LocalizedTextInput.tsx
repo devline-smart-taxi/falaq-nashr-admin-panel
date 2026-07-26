@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Input, Button, Space, Tooltip, Typography, Form } from 'antd'
-import { SyncOutlined, GlobalOutlined } from '@ant-design/icons'
+import { Input, Space, Tooltip, Form } from 'antd'
+import { SyncOutlined } from '@ant-design/icons'
 import type { LocalizedText } from '@/types/api'
 import { toCyrillic } from '@/lib/translit'
 
@@ -14,9 +14,10 @@ interface Props {
 }
 
 /**
- * LocalizedText (ko'p tilli) maydon. Foydalanuvchi lotinда yozadi —
- * `uz-Cyrl` avto-transliteratsiya qilinadi (qo'lda tahrirlasa bosilmaydi).
- * `ru`/`en` ixtiyoriy, "Boshqa tillar" tugmasi ostida.
+ * LocalizedText (ko'p tilli) maydon. To'rt til ham (uz lotin, uz kirill, ru, en)
+ * doim ko'rinib turadi. Foydalanuvchi lotinда yozadi — `uz-Cyrl` avto-transliteratsiya
+ * qilinadi (qo'lda tahrirlasa bosilmaydi). Validatsiya xatosida to'ldirilmagan
+ * maydonlar qizil chegara oladi.
  */
 export function LocalizedTextInput({
   value,
@@ -27,10 +28,14 @@ export function LocalizedTextInput({
 }: Props) {
   const v: LocalizedText = value ?? { uz: '' }
   const [cyrTouched, setCyrTouched] = useState(false)
-  const [showMore, setShowMore] = useState(false)
-  const { status } = Form.Item.useStatus() // uz maydonини xatoда qizartirish uchun
+  const { status } = Form.Item.useStatus()
 
   const Field = multiline ? Input.TextArea : Input
+  const autoSize = multiline ? { minRows: 2, maxRows: 6 } : undefined
+
+  // Xato bo'lganда bo'sh maydonni qizartirish uchun.
+  const errIfEmpty = (text?: string) =>
+    status === 'error' && !text?.trim() ? 'error' : undefined
 
   function emit(patch: Partial<LocalizedText>) {
     onChange?.({ ...v, ...patch })
@@ -53,9 +58,9 @@ export function LocalizedTextInput({
       <Field
         value={v.uz}
         onChange={onUz}
-        status={status === 'error' ? 'error' : undefined}
+        status={errIfEmpty(v.uz)}
         placeholder={placeholder ?? "O'zbekcha (lotin)"}
-        autoSize={multiline ? { minRows: 2, maxRows: 6 } : undefined}
+        autoSize={autoSize}
       />
 
       <Field
@@ -64,8 +69,9 @@ export function LocalizedTextInput({
           setCyrTouched(true)
           emit({ 'uz-Cyrl': e.target.value })
         }}
+        status={errIfEmpty(v['uz-Cyrl'])}
         placeholder="Ўзбекча (кирилл) — авто"
-        autoSize={multiline ? { minRows: 2, maxRows: 6 } : undefined}
+        autoSize={autoSize}
         addonAfter={
           <Tooltip title="Lotin'dan qayta hisoblash">
             <SyncOutlined onClick={resync} style={{ cursor: 'pointer' }} />
@@ -73,32 +79,21 @@ export function LocalizedTextInput({
         }
       />
 
-      {showMore ? (
-        <>
-          <Field
-            value={v.ru ?? ''}
-            onChange={(e) => emit({ ru: e.target.value })}
-            placeholder="Русский (ixtiyoriy)"
-            autoSize={multiline ? { minRows: 2, maxRows: 6 } : undefined}
-          />
-          <Field
-            value={v.en ?? ''}
-            onChange={(e) => emit({ en: e.target.value })}
-            placeholder="English (ixtiyoriy)"
-            autoSize={multiline ? { minRows: 2, maxRows: 6 } : undefined}
-          />
-        </>
-      ) : (
-        <Button
-          type="link"
-          size="small"
-          icon={<GlobalOutlined />}
-          onClick={() => setShowMore(true)}
-          style={{ paddingLeft: 0 }}
-        >
-          <Typography.Text type="secondary">Boshqa tillar (ru/en)</Typography.Text>
-        </Button>
-      )}
+      <Field
+        value={v.ru ?? ''}
+        onChange={(e) => emit({ ru: e.target.value })}
+        status={errIfEmpty(v.ru)}
+        placeholder="Русский"
+        autoSize={autoSize}
+      />
+
+      <Field
+        value={v.en ?? ''}
+        onChange={(e) => emit({ en: e.target.value })}
+        status={errIfEmpty(v.en)}
+        placeholder="English"
+        autoSize={autoSize}
+      />
     </Space>
   )
 }

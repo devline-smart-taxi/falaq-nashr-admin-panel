@@ -6,7 +6,7 @@ import { ActiveTag } from '@/components/common/ActiveTag'
 import { useAuthStore } from '@/stores/auth'
 import { localize, formatUZS } from '@/lib/localize'
 import { saveResource } from '@/lib/crud'
-import { normalizeLT, requireLT, requiredLTRule } from '@/lib/lt'
+import { normalizeLT, requireLT, requiredLTRule, optionalLTRule } from '@/lib/lt'
 import type { Plan, CreatePlanInput } from '@/types/plan'
 import type { LocalizedText } from '@/types/api'
 import { plansApi } from './api'
@@ -101,7 +101,7 @@ export function PlansPage() {
           <Form.Item name="name" label="Nom" required rules={[requiredLTRule]}>
             <LocalizedTextInput placeholder="Masalan: Oylik obuna" />
           </Form.Item>
-          <Form.Item name="description" label="Tavsif">
+          <Form.Item name="description" label="Tavsif" rules={[optionalLTRule]}>
             <LocalizedTextInput multiline placeholder="Tarif haqida" />
           </Form.Item>
           <Form.Item
