@@ -44,6 +44,9 @@ const UsersPage = lazy(() =>
 const SalesPage = lazy(() =>
   import('@/features/sales/SalesPage').then((m) => ({ default: m.SalesPage })),
 )
+const SettingsPage = lazy(() =>
+  import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+)
 const AdminsPage = lazy(() =>
   import('@/features/admins/AdminsPage').then((m) => ({ default: m.AdminsPage })),
 )
@@ -68,6 +71,7 @@ export const router = createBrowserRouter([
           { path: PATHS.notifications, element: <NotificationsPage /> },
           { path: PATHS.users, element: <UsersPage /> },
           { path: PATHS.sales, element: <SalesPage /> },
+          { path: PATHS.settings, element: <SettingsPage /> },
           {
             path: PATHS.admins,
             element: (

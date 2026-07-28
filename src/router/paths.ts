@@ -11,5 +11,6 @@ export const PATHS = {
   notifications: '/notifications',
   users: '/users',
   sales: '/sales',
+  settings: '/settings',
   admins: '/admins',
 } as const

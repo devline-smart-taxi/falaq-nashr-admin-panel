@@ -14,6 +14,7 @@ import {
   BellOutlined,
   TeamOutlined,
   DollarOutlined,
+  SettingOutlined,
   SafetyOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -44,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: PATHS.notifications, label: 'Bildirishnomalar', icon: <BellOutlined /> },
   { key: PATHS.users, label: 'Foydalanuvchilar', icon: <TeamOutlined /> },
   { key: PATHS.sales, label: 'Sotuvlar', icon: <DollarOutlined /> },
+  { key: PATHS.settings, label: 'Sozlamalar', icon: <SettingOutlined /> },
   { key: PATHS.admins, label: 'Adminlar', icon: <SafetyOutlined />, superAdminOnly: true },
 ]
 
