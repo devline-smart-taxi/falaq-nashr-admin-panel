@@ -59,6 +59,13 @@ export function LoginPage() {
     >
       <Card style={{ width: 400, maxWidth: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <img
+            src="/icon.png"
+            alt="Falaq Nashr"
+            width={64}
+            height={64}
+            style={{ borderRadius: 14, marginBottom: 12 }}
+          />
           <Typography.Title level={3} style={{ marginBottom: 0 }}>
             Falaq Admin
           </Typography.Title>

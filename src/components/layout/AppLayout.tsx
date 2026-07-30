@@ -99,17 +99,17 @@ export function AppLayout() {
           style={{
             height: 56,
             margin: 16,
-            color: '#fff',
-            fontSize: collapsed ? 18 : 20,
-            fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            whiteSpace: 'nowrap',
             overflow: 'hidden',
           }}
         >
-          {collapsed ? 'F' : 'Falaq Admin'}
+          <img
+            src={collapsed ? '/logo-mark.png' : '/type-logo.svg'}
+            alt="Falaq Nashr"
+            style={{ height: collapsed ? 30 : 28, width: 'auto', display: 'block' }}
+          />
         </div>
         <Menu
           theme="dark"
