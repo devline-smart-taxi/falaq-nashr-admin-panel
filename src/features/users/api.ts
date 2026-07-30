@@ -1,4 +1,5 @@
 import { http, httpMsg } from '@/api/client'
+import type { Paginated, PaginationParams } from '@/types/api'
 import type { AppUser } from '@/types/user'
 
 /** Foydalanuvchiga to'lovsiz obuna biriktirish (admin grant). Backend xabarini qaytaradi. */
@@ -8,19 +9,27 @@ export function grantSubscription(userId: string, planId: string): Promise<strin
     .then((r) => r.message)
 }
 
-function isItemsWrapper(d: unknown): d is { items: AppUser[] } {
+function isPaginated(d: unknown): d is Paginated<AppUser> {
   return !!d && typeof d === 'object' && Array.isArray((d as { items?: unknown }).items)
 }
 
 /**
- * GET /admin/users — Swagger massiv deydi, lekin backend `{ items, meta }`
- * (paginatsiya) qaytarishi mumkin. Ikkala shaklni ham massivga keltiramiz.
+ * GET /admin/users — server-side paginatsiya ({ items, meta }). Backend eski
+ * massiv shaklида ham qaytarsa, Paginated shaklga o'raymiz (meta'siz).
  */
-export async function listUsers(search?: string): Promise<AppUser[]> {
-  const data = await http.get<unknown>('/admin/users', {
-    params: { search: search || undefined },
-  })
-  if (Array.isArray(data)) return data as AppUser[]
-  if (isItemsWrapper(data)) return data.items
-  return []
+export async function listUsers(params: PaginationParams): Promise<Paginated<AppUser>> {
+  const data = await http.get<unknown>('/admin/users', { params })
+  if (isPaginated(data)) return data
+  const items = Array.isArray(data) ? (data as AppUser[]) : []
+  return {
+    items,
+    meta: {
+      total: items.length,
+      page: params.page ?? 1,
+      limit: params.limit ?? (items.length || 1),
+      totalPages: 1,
+      hasNextPage: false,
+      hasPrevPage: false,
+    },
+  }
 }

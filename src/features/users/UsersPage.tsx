@@ -40,16 +40,19 @@ const ROLE_COLOR: Record<Role, string> = {
 export function UsersPage() {
   const lang = useAuthStore((s) => s.lang)
   const { message } = App.useApp()
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
   const [search, setSearch] = useState('')
   const [grantUser, setGrantUser] = useState<AppUser | null>(null)
   const [planId, setPlanId] = useState<string | undefined>()
   const [granting, setGranting] = useState(false)
 
   const usersQ = useQuery({
-    queryKey: ['users', { search }],
-    queryFn: () => listUsers(search),
+    queryKey: ['users', { page, limit, search }],
+    queryFn: () => listUsers({ page, limit, search: search || undefined }),
     placeholderData: (prev) => prev,
   })
+  const meta = usersQ.data?.meta
 
   // Obuna berish modali ochilganда faol tariflarni yuklaymiz.
   const plansQ = useQuery({
@@ -165,7 +168,10 @@ export function UsersPage() {
           placeholder="Telefon / ism / email"
           allowClear
           style={{ width: 260 }}
-          onSearch={setSearch}
+          onSearch={(val) => {
+            setSearch(val)
+            setPage(1)
+          }}
         />
       }
     >
@@ -182,10 +188,20 @@ export function UsersPage() {
         rowKey="id"
         size="middle"
         loading={usersQ.isLoading}
-        dataSource={usersQ.data ?? []}
+        dataSource={usersQ.data?.items ?? []}
         columns={columns}
         scroll={{ x: 'max-content' }}
-        pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `Jami: ${t}` }}
+        pagination={{
+          current: meta?.page ?? page,
+          pageSize: meta?.limit ?? limit,
+          total: meta?.total ?? 0,
+          showSizeChanger: true,
+          showTotal: (t) => `Jami: ${t}`,
+          onChange: (p, ps) => {
+            setPage(p)
+            setLimit(ps)
+          },
+        }}
       />
 
       <Modal
