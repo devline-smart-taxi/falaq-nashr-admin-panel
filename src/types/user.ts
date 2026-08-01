@@ -11,6 +11,8 @@ export interface AppUser {
   authProvider: AuthProvider
   role: Role
   isActive: boolean
+  /** Foydalanuvchida hozir faol (to'langan yoki admin bergan) obuna bormi. */
+  hasActiveSubscription?: boolean
   createdAt: string
   updatedAt: string
 }

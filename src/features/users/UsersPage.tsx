@@ -133,6 +133,20 @@ export function UsersPage() {
       render: (r: Role) => <Tag color={ROLE_COLOR[r]}>{r}</Tag>,
     },
     {
+      title: 'Obuna',
+      dataIndex: 'hasActiveSubscription',
+      key: 'hasActiveSubscription',
+      width: 110,
+      render: (v?: boolean) =>
+        v ? (
+          <Tag icon={<CrownOutlined />} color="gold">
+            Faol
+          </Tag>
+        ) : (
+          <Tag color="default">Yo'q</Tag>
+        ),
+    },
+    {
       title: 'Holat',
       dataIndex: 'isActive',
       key: 'isActive',

@@ -110,7 +110,7 @@ export function DashboardPage() {
       <Spin spinning={overview.isLoading}>
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card style={{ height: '100%' }}>
               <Statistic
                 title="Foydalanuvchilar"
                 value={o?.users.total ?? 0}
@@ -123,21 +123,21 @@ export function DashboardPage() {
           </Col>
 
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card style={{ height: '100%' }}>
               <Statistic
                 title="Umumiy tushum"
-                value={o?.sales.revenue ?? 0}
+                value={(o?.sales.revenue ?? 0) + (o?.subscriptions.revenue ?? 0)}
                 formatter={(v) => formatUZS(Number(v))}
                 prefix={<DollarOutlined />}
               />
               <Typography.Text type="secondary">
-                Bu oy: {formatUZS(o?.sales.revenueThisMonth)}
+                Kitob: {formatUZS(o?.sales.revenue)} · Obuna: {formatUZS(o?.subscriptions.revenue)}
               </Typography.Text>
             </Card>
           </Col>
 
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card style={{ height: '100%' }}>
               <Statistic
                 title="Faol obunalar"
                 value={o?.subscriptions.active ?? 0}
@@ -150,7 +150,7 @@ export function DashboardPage() {
           </Col>
 
           <Col xs={24} sm={12} lg={6}>
-            <Card>
+            <Card style={{ height: '100%' }}>
               <Statistic
                 title="Kitoblar"
                 value={o?.books.total ?? 0}
@@ -166,7 +166,7 @@ export function DashboardPage() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={8}>
-          <Card size="small">
+          <Card size="small" style={{ height: '100%' }}>
             <Statistic
               title="Bugungi tushum"
               value={o?.sales.revenueToday ?? 0}
@@ -176,12 +176,19 @@ export function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card size="small">
-            <Statistic title="To'langan sotuvlar" value={o?.sales.paidCount ?? 0} />
+          <Card size="small" style={{ height: '100%' }}>
+            <Statistic
+              title="To'langan sotuvlar"
+              value={(o?.sales.paidCount ?? 0) + (o?.subscriptions.active ?? 0)}
+            />
+            <Typography.Text type="secondary">
+              Kitob: {formatNumber(o?.sales.paidCount)} · Obuna:{' '}
+              {formatNumber(o?.subscriptions.active)}
+            </Typography.Text>
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card size="small">
+          <Card size="small" style={{ height: '100%' }}>
             <Space size="large" wrap>
               <Statistic title="Tayyor kontent" value={o?.content.ready ?? 0} />
               <Statistic title="Jarayonda" value={o?.content.processing ?? 0} />
